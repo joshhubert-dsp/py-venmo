@@ -1,8 +1,17 @@
-from venmo_api import ResourceNotFoundError, InvalidHttpMethodError, HttpCodeError, validate_access_token
+import threading
 from json import JSONDecodeError
 from typing import List
+
+import orjson
 import requests
-import threading
+
+from venmo_api import (
+    HttpCodeError,
+    InvalidHttpMethodError,
+    ResourceNotFoundError,
+    validate_access_token,
+)
+from venmo_api.utils import PROJECT_ROOT
 
 
 class ApiClient(object):
@@ -14,6 +23,7 @@ class ApiClient(object):
         """
         :param access_token: <str> access token you received for your account.
         """
+
         super().__init__()
 
         access_token = validate_access_token(access_token=access_token)
@@ -21,7 +31,9 @@ class ApiClient(object):
         self.access_token = access_token
         self.configuration = {"host": "https://api.venmo.com/v1"}
 
-        self.default_headers = {"User-Agent": "Venmo/10.50.0 (iPhone; iOS 18.0; Scale/3.0)"}
+        self.default_headers = orjson.loads(
+            (PROJECT_ROOT / "headers.json").read_bytes()
+        )
         if self.access_token:
             self.default_headers.update({"Authorization": self.access_token})
 
@@ -33,13 +45,16 @@ class ApiClient(object):
         self.default_headers.update({"Authorization": self.access_token})
         self.session.headers.update({"Authorization": self.access_token})
 
-    def call_api(self, resource_path: str, method: str,
-                 header_params: dict = None,
-                 params: dict = None,
-                 body: dict = None,
-                 callback=None,
-                 ok_error_codes: List[int] = None):
-
+    def call_api(
+        self,
+        resource_path: str,
+        method: str,
+        header_params: dict = None,
+        params: dict = None,
+        body: dict = None,
+        callback=None,
+        ok_error_codes: List[int] = None,
+    ):
         """
         Makes the HTTP request (Synchronous) and return the deserialized data.
         To make it async multi-threaded, define a callback function.
@@ -55,21 +70,33 @@ class ApiClient(object):
         """
 
         if callback is None:
-            return self.__call_api(resource_path=resource_path, method=method,
-                                   header_params=header_params, params=params,
-                                   body=body, callback=callback,
-                                   ok_error_codes=ok_error_codes)
+            return self.__call_api(
+                resource_path=resource_path,
+                method=method,
+                header_params=header_params,
+                params=params,
+                body=body,
+                callback=callback,
+                ok_error_codes=ok_error_codes,
+            )
         else:
-            thread = threading.Thread(target=self.__call_api,
-                                      args=(resource_path, method, header_params,
-                                            params, body, callback))
+            thread = threading.Thread(
+                target=self.__call_api,
+                args=(resource_path, method, header_params, params, body, callback),
+            )
         thread.start()
         return thread
 
-    def __call_api(self, resource_path, method,
-                   header_params=None, params=None,
-                   body=None, callback=None,
-                   ok_error_codes: List[int] = None):
+    def __call_api(
+        self,
+        resource_path,
+        method,
+        header_params=None,
+        params=None,
+        body=None,
+        callback=None,
+        ok_error_codes: List[int] = None,
+    ):
         """
         Calls API on the provided path
 
@@ -89,7 +116,7 @@ class ApiClient(object):
         if body:
             header_params.update({"Content-Type": "application/json"})
 
-        url = self.configuration['host'] + resource_path
+        url = self.configuration["host"] + resource_path
 
         # Use a new session for multi-threaded
         if callback:
@@ -100,9 +127,15 @@ class ApiClient(object):
             session = self.session
 
         # perform request and return response
-        processed_response = self.request(method, url, session,
-                                          header_params=header_params, params=params,
-                                          body=body, ok_error_codes=ok_error_codes)
+        processed_response = self.request(
+            method,
+            url,
+            session,
+            header_params=session.headers,
+            params=params,
+            body=body,
+            ok_error_codes=ok_error_codes,
+        )
 
         self.last_response = processed_response
 
@@ -111,11 +144,16 @@ class ApiClient(object):
         else:
             return processed_response
 
-    def request(self, method, url, session,
-                header_params=None,
-                params=None,
-                body=None,
-                ok_error_codes: List[int] = None):
+    def request(
+        self,
+        method,
+        url,
+        session,
+        header_params=None,
+        params=None,
+        body=None,
+        ok_error_codes: List[int] = None,
+    ):
         """
         Make a request with the provided information using a requests.session
         :param method:
@@ -129,14 +167,17 @@ class ApiClient(object):
         :return:
         """
 
-        if method not in ['POST', 'PUT', 'GET', 'DELETE']:
+        if method not in ["POST", "PUT", "GET", "DELETE"]:
             raise InvalidHttpMethodError()
 
         response = session.request(
-            method=method, url=url, headers=header_params, params=params, json=body)
+            method=method, url=url, headers=header_params, params=params, json=body
+        )
 
         # Only accepts the 20x status codes.
-        validated_response = self.__validate_response(response, ok_error_codes=ok_error_codes)
+        validated_response = self.__validate_response(
+            response, ok_error_codes=ok_error_codes
+        )
 
         return validated_response
 
@@ -155,16 +196,27 @@ class ApiClient(object):
             body = {}
             headers = {}
 
-        built_response = {"status_code": response.status_code, "headers": headers, "body": body}
+        built_response = {
+            "status_code": response.status_code,
+            "headers": headers,
+            "body": body,
+        }
 
         if response.status_code in range(200, 205) and response.json:
             return built_response
 
-        elif response.status_code == 400 and response.json().get('error').get('code') == 283:
+        elif (
+            response.status_code == 400
+            and response.json().get("error").get("code") == 283
+        ):
             raise ResourceNotFoundError()
 
         else:
-            if body and ok_error_codes and body.get('error').get('code') in ok_error_codes:
+            if (
+                body
+                and ok_error_codes
+                and body.get("error").get("code") in ok_error_codes
+            ):
                 return built_response
 
             raise HttpCodeError(response=response)

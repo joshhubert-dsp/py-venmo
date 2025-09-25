@@ -1,0 +1,30 @@
+[project]
+name = "venmo-api"
+version = "0.4.0"
+description = "Venmo API client for Python"
+readme = "README.md"
+authors = [
+    { name = "Mark Mohades"},
+]
+license = "GPL-3.0-only"
+license-files = [
+    "LICENSE"
+]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "orjson>=3.11.3",
+    "requests>=2.19.0",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+package-dir = { "" = "." }
+
+[tool.setuptools.packages.find]
+where = ["."]
