@@ -1,8 +1,7 @@
-from venmo_api import BaseModel, User, JSONSchema
+from venmo_api import BaseModel, JSONSchema, User
 
 
 class Mention(BaseModel):
-
     def __init__(self, username, user, json=None):
         """
         Mention model
@@ -29,6 +28,8 @@ class Mention(BaseModel):
 
         parser = JSONSchema.mention(json)
 
-        return cls(username=parser.get_username(),
-                   user=User.from_json(parser.get_user()),
-                   json=json)
+        return cls(
+            username=parser.get_username(),
+            user=User.from_json(parser.get_user()),
+            json=json,
+        )

@@ -1,6 +1,6 @@
 [project]
 name = "venmo-api"
-version = "0.4.0"
+version = "1.0.0"
 description = "Venmo API client for Python"
 readme = "README.md"
 authors = [
@@ -12,6 +12,8 @@ license-files = [
 ]
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "devtools>=0.12.2",
+    "loguru>=0.7.3",
     "orjson>=3.11.3",
     "requests>=2.19.0",
 ]

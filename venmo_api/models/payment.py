@@ -1,11 +1,24 @@
-from venmo_api import string_to_timestamp, User, BaseModel, JSONSchema
 from enum import Enum
+
+from venmo_api import BaseModel, JSONSchema, User, string_to_timestamp
 
 
 class Payment(BaseModel):
-
-    def __init__(self, id_, actor, target, action, amount, audience, date_created, date_reminded, date_completed,
-                 note, status, json=None):
+    def __init__(
+        self,
+        id_,
+        actor,
+        target,
+        action,
+        amount,
+        audience,
+        date_created,
+        date_reminded,
+        date_completed,
+        note,
+        status,
+        json=None,
+    ):
         """
         Payment model
         :param id_:
@@ -59,13 +72,13 @@ class Payment(BaseModel):
             date_completed=string_to_timestamp(parser.get_date_completed()),
             note=parser.get_note(),
             status=PaymentStatus(parser.get_status()),
-            json=json
+            json=json,
         )
 
 
 class PaymentStatus(Enum):
-    SETTLED = 'settled'
-    CANCELLED = 'cancelled'
-    PENDING = 'pending'
-    FAILED = 'failed'
-    EXPIRED = 'expired'
+    SETTLED = "settled"
+    CANCELLED = "cancelled"
+    PENDING = "pending"
+    FAILED = "failed"
+    EXPIRED = "expired"

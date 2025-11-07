@@ -32,5 +32,5 @@ class EligibilityToken(BaseModel):
             eligible=parser.get_eligible(),
             fees=fee_objects,
             fee_disclaimer=parser.get_fee_disclaimer(),
-            json=json
+            json=json,
         )

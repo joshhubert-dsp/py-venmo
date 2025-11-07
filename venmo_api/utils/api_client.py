@@ -1,3 +1,4 @@
+import os
 import threading
 from json import JSONDecodeError
 from typing import List
@@ -12,6 +13,7 @@ from venmo_api import (
     validate_access_token,
 )
 from venmo_api.utils import PROJECT_ROOT
+from venmo_api.utils.logging_session import LoggingSession
 
 
 class ApiClient(object):
@@ -37,7 +39,10 @@ class ApiClient(object):
         if self.access_token:
             self.default_headers.update({"Authorization": self.access_token})
 
-        self.session = requests.Session()
+        if os.getenv("LOGGING_SESSION"):
+            self.session = LoggingSession()
+        else:
+            self.session = requests.Session()
         self.session.headers.update(self.default_headers)
 
     def update_access_token(self, access_token):

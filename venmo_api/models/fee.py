@@ -2,8 +2,16 @@ from venmo_api import BaseModel, JSONSchema
 
 
 class Fee(BaseModel):
-    def __init__(self, product_uri, applied_to, base_fee_amount, fee_percentage, calculated_fee_amount_in_cents,
-                 fee_token, json=None):
+    def __init__(
+        self,
+        product_uri,
+        applied_to,
+        base_fee_amount,
+        fee_percentage,
+        calculated_fee_amount_in_cents,
+        fee_token,
+        json=None,
+    ):
         super().__init__()
 
         self.product_uri = product_uri
@@ -33,5 +41,5 @@ class Fee(BaseModel):
             fee_percentage=parser.get_fee_percentage(),
             calculated_fee_amount_in_cents=parser.get_calculated_fee_amount_in_cents(),
             fee_token=parser.get_fee_token(),
-            json=json
+            json=json,
         )
