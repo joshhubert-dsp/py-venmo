@@ -1,5 +1,4 @@
 import uuid
-from typing import List, Union
 
 from venmo_api import (
     AlreadyRemindedPaymentError,
@@ -94,7 +93,7 @@ class PaymentApi(object):
             raise NoPendingPaymentToUpdateError(payment_id=payment_id, action=action)
         return True
 
-    def get_payment_methods(self, callback=None) -> Union[List[PaymentMethod], None]:
+    def get_payment_methods(self, callback=None) -> list[PaymentMethod] | None:
         """
         Get a list of available payment_methods
         :param callback:
@@ -122,7 +121,7 @@ class PaymentApi(object):
         target_user: User = None,
         privacy_setting: PaymentPrivacy = PaymentPrivacy.PRIVATE,
         callback=None,
-    ) -> Union[bool, None]:
+    ) -> bool | None:
         """
         send [amount] money with [note] to the ([target_user_id] or [target_user]) from the [funding_source_id]
         If no [funding_source_id] is provided, it will find the default source_id and uses that.
@@ -155,7 +154,7 @@ class PaymentApi(object):
         privacy_setting: PaymentPrivacy = PaymentPrivacy.PRIVATE,
         target_user: User = None,
         callback=None,
-    ) -> Union[bool, None]:
+    ) -> bool | None:
         """
         Request [amount] money with [note] from the ([target_user_id] or [target_user])
         :param amount: <float> amount of money to be requested
@@ -265,7 +264,7 @@ class PaymentApi(object):
         target_user: User = None,
         eligibility_token: str = None,
         callback=None,
-    ) -> Union[bool, None]:
+    ) -> bool | None:
         """
         Generic method for sending and requesting money
         :param amount:
@@ -285,20 +284,8 @@ class PaymentApi(object):
         if not is_send_money:
             amount = -amount
 
-        uid = uuid.uuid4().hex
-        uid_dashed = (
-            uid[:8]
-            + "-"
-            + uid[8:12]
-            + "-"
-            + uid[12:16]
-            + "-"
-            + uid[16:20]
-            + "-"
-            + uid[20:32]
-        )
         body = {
-            "uuid": uid_dashed,
+            "uuid": str(uuid.uuid4()),
             "user_id": target_user_id,
             "audience": privacy_setting,
             "amount": amount,

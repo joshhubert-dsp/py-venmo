@@ -1,5 +1,3 @@
-from typing import List, Union
-
 from venmo_api import Page, Transaction, User, deserialize, get_user_id, wrap_callback
 
 
@@ -9,7 +7,7 @@ class UserApi(object):
         self.__api_client = api_client
         self.__profile = None
 
-    def get_my_profile(self, callback=None, force_update=False) -> Union[User, None]:
+    def get_my_profile(self, callback=None, force_update=False) -> User | None:
         """
         Get my profile info and return as a <User>
         :return my_profile: <User>
@@ -43,7 +41,7 @@ class UserApi(object):
         offset: int = 0,
         limit: int = 50,
         username=False,
-    ) -> Union[List[User], None]:
+    ) -> list[User] | None:
         """
         search for [query] in users
         :param query:
@@ -78,7 +76,7 @@ class UserApi(object):
             current_offset=offset,
         )
 
-    def get_user(self, user_id: str, callback=None) -> Union[User, None]:
+    def get_user(self, user_id: str, callback=None) -> User | None:
         """
         Get the user profile with [user_id]
         :param user_id: <str>, example: '2859950549165568970'
@@ -99,7 +97,7 @@ class UserApi(object):
 
         return deserialize(response=response, data_type=User)
 
-    def get_user_by_username(self, username: str) -> Union[User, None]:
+    def get_user_by_username(self, username: str) -> User | None:
         """
         Get the user profile with [username]
         :param username:
@@ -120,7 +118,7 @@ class UserApi(object):
         callback=None,
         offset: int = 0,
         limit: int = 3337,
-    ) -> Union[Page, None]:
+    ) -> Page | None:
         """
         Get ([user_id]'s or [user]'s) friends list as a list of <User>s
         :return users_list: <list> A list of <User> objects or empty
@@ -155,7 +153,7 @@ class UserApi(object):
         callback=None,
         limit: int = 50,
         before_id=None,
-    ) -> Union[Page, None]:
+    ) -> Page | None:
         """
         Get ([user_id]'s or [user]'s) transactions visible to yourself as a list of <Transaction>s
         :param user_id:
@@ -199,7 +197,7 @@ class UserApi(object):
         callback=None,
         limit: int = 50,
         before_id=None,
-    ) -> Union[Page, None]:
+    ) -> Page | None:
         """
         Get the transactions between two users. Note that user_one must be the owner of the access token.
         Otherwise it raises an unauthorized error.

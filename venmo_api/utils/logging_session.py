@@ -27,18 +27,7 @@ class LoggingSession(Session):
     def send(self, request: PreparedRequest, **kwargs) -> Response:
         logger.info(f"→ {request.method} {request.url}")
         logger.debug(f"→ Request headers: {pformat(dict(request.headers))}")
-        # request.body may be bytes, str, file-like, or generator. Try to show it safely.
         body = request.body
-        # if hasattr(body, "read"):
-        #     try:
-        #         pos = body.tell()
-        #         body.seek(0)
-        #         content = body.read()
-        #         body.seek(pos)
-        #         logger.debug(f"→ Request body (file-like): {safe_text(content)}")
-        #     except Exception:
-        #         logger.debug("→ Request body: (file-like, unreadable)")
-        # else:
         if isinstance(body, str):
             logger.debug(f"→ Request body (str): {pformat(safe_text(body.encode()))}")
         elif isinstance(body, bytes):

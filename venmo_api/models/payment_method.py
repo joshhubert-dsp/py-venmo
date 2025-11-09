@@ -1,6 +1,5 @@
 import logging
 from enum import Enum
-from typing import Dict
 
 from venmo_api import BaseModel, JSONSchema
 
@@ -24,7 +23,7 @@ class PaymentMethod(BaseModel):
         self._json = json
 
     @classmethod
-    def from_json(cls, json: Dict):
+    def from_json(cls, json: dict):
         payment_parser = JSONSchema.payment_method(json)
 
         pid = payment_parser.get_id()

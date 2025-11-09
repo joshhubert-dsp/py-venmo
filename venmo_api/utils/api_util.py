@@ -1,30 +1,13 @@
-import re
 from enum import Enum
-from typing import Dict, List
 
 from venmo_api import ArgumentMissingError, Page, User
 
 
-def validate_access_token(access_token):
-    """
-    Validate the access_token
-    :param access_token:
-    :return:
-    """
-    token_re = r"^(Bearer)?(.+)$"
-    if not access_token:
-        return
-
-    access_token = re.findall(token_re, access_token)[0][1].replace(" ", "")
-
-    return f"Bearer {access_token}"
-
-
-def deserialize(response: Dict, data_type, nested_response: List[str] = None):
+def deserialize(response: dict, data_type, nested_response: list[str] = None):
     """Extract one or a list of Objects from the api_client structured response.
-    :param response: <Dict>
+    :param response: <dict>
     :param data_type: <Generic>
-    :param nested_response: <List[str]> Optional. Loop through the body
+    :param nested_response: <list[str]> Optional. Loop through the body
     :return: a single <Object> or a <Page> of objects (Objects can be User/Transaction/Payment/PaymentMethod)
     """
 
@@ -47,11 +30,11 @@ def deserialize(response: Dict, data_type, nested_response: List[str] = None):
     return data_type.from_json(json=data)
 
 
-def wrap_callback(callback, data_type, nested_response: List[str] = None):
+def wrap_callback(callback, data_type, nested_response: list[str] = None):
     """
     :param callback: <function> Function that was provided by the user
     :param data_type: <class> It can be either User or Transaction
-    :param nested_response: <List[str]> Optional. Loop through the body
+    :param nested_response: <list[str]> Optional. Loop through the body
     :return wrapped_callback: <function> or <NoneType> The user callback wrapped for json parsing.
     """
     if not callback:

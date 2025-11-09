@@ -1,3 +1,6 @@
+# TODO Pydantic V2!
+
+
 class BaseModel(object):
     def __init__(self):
         self._json = None
