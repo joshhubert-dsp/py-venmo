@@ -7,14 +7,18 @@ from venmo_api import (
 )
 
 
+# NOTE: it seems a device-id is required for payments now, so ApiClient should probably
+# own it
 class AuthenticationApi(object):
     TWO_FACTOR_ERROR_CODE = 81109
 
-    def __init__(self, api_client: ApiClient = None, device_id: str = None):
+    def __init__(
+        self, api_client: ApiClient | None = None, device_id: str | None = None
+    ):
         super().__init__()
 
         self.__device_id = device_id or random_device_id()
-        self.__api_client = api_client or ApiClient()
+        self.__api_client = api_client or ApiClient(device_id=self.__device_id)
 
     def login_with_credentials_cli(self, username: str, password: str) -> str:
         """
@@ -100,11 +104,7 @@ class AuthenticationApi(object):
         """
 
         resource_path = "/oauth/access_token"
-        header_params = {
-            "device-id": self.__device_id,
-            "Content-Type": "application/json",
-            "Host": "api.venmo.com",
-        }
+        header_params = {"device-id": self.__device_id, "Host": "api.venmo.com"}
         body = {
             "phone_email_or_username": username,
             "client_id": "1",
@@ -127,11 +127,7 @@ class AuthenticationApi(object):
         """
 
         resource_path = "/account/two-factor/token"
-        header_params = {
-            "device-id": self.__device_id,
-            "Content-Type": "application/json",
-            "venmo-otp-secret": otp_secret,
-        }
+        header_params = {"device-id": self.__device_id, "venmo-otp-secret": otp_secret}
         body = {"via": "sms"}
 
         response = self.__api_client.call_api(

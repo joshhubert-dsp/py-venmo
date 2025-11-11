@@ -25,29 +25,29 @@ def safe_text(b: bytes | None, fallback_repr=True):
 
 class LoggingSession(Session):
     def send(self, request: PreparedRequest, **kwargs) -> Response:
-        logger.info(f"→ {request.method} {request.url}")
-        logger.debug(f"→ Request headers: {pformat(dict(request.headers))}")
+        logger.debug(f"→ {request.method} {request.url}")
+        logger.trace(f"→ Request headers: {pformat(dict(request.headers))}")
         body = request.body
         if isinstance(body, str):
-            logger.debug(f"→ Request body (str): {pformat(safe_text(body.encode()))}")
+            logger.trace(f"→ Request body (str): {pformat(safe_text(body.encode()))}")
         elif isinstance(body, bytes):
-            logger.debug(f"→ Request body (bytes): {pformat(safe_text(body))}")
+            logger.trace(f"→ Request body (bytes): {pformat(safe_text(body))}")
         elif body is None:
-            logger.debug("→ Request body: <none>")
+            logger.trace("→ Request body: <none>")
         else:
             # could be generator/iterable (multipart streaming)
-            logger.debug(f"→ Request body: (type={type(body).__name__}) {repr(body)}")
+            logger.trace(f"→ Request body: (type={type(body).__name__}) {repr(body)}")
 
         resp = super().send(request, **kwargs)
 
-        logger.info(f"← {resp.status_code} {resp.reason}")
-        logger.debug(f"← Response headers: {pformat(dict(resp.headers))}")
+        logger.debug(f"← {resp.status_code} {resp.reason}")
+        logger.trace(f"← Response headers: {pformat(dict(resp.headers))}")
 
         # careful: .content will load the whole response into memory
         try:
             content = resp.content
-            logger.debug(f"← Response body: {pformat(safe_text(content))}")
+            logger.trace(f"← Response body: {pformat(safe_text(content))}")
         except Exception as e:
-            logger.debug(f"← Response body: <unreadable: {e}>")
+            logger.trace(f"← Response body: <unreadable: {e}>")
 
         return resp

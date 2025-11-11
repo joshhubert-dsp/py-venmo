@@ -1,6 +1,5 @@
+import uuid
 from datetime import datetime
-from random import choice, randint
-from string import ascii_uppercase
 
 
 def string_to_timestamp(utc):
@@ -38,15 +37,16 @@ def random_device_id():
     Generate a random device id that can be used for logging in.
     :return:
     """
-    BASE_DEVICE_ID = "88884260-05O3-8U81-58I1-2WA76F357GR9"
+    return str(uuid.uuid4()).upper()
+    # BASE_DEVICE_ID = "88884260-05O3-8U81-58I1-2WA76F357GR9"
 
-    result = []
-    for char in BASE_DEVICE_ID:
-        if char.isdigit():
-            result.append(str(randint(0, 9)))
-        elif char == "-":
-            result.append("-")
-        else:
-            result.append(choice(ascii_uppercase))
+    # result = []
+    # for char in BASE_DEVICE_ID:
+    #     if char.isdigit():
+    #         result.append(str(randint(0, 9)))
+    #     elif char == "-":
+    #         result.append("-")
+    #     else:
+    #         result.append(choice(ascii_uppercase))
 
-    return "".join(result)
+    # return "".join(result)
