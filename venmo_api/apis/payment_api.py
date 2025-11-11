@@ -180,13 +180,12 @@ class PaymentApi(object):
         self,
         amount: float,
         note: str,
-        target_id: int = None,
-        funding_source_id: str = None,
+        target_id: str,
         action: str = "pay",
         country_code: str = "1",
         target_type: str = "user_id",
         callback=None,
-    ):
+    ) -> EligibilityToken:
         """
         Generate eligibility token which is needed in payment requests
         :param amount: <float> amount of money to be requested
@@ -199,15 +198,13 @@ class PaymentApi(object):
         """
         resource_path = "/protection/eligibility"
         body = {
-            "funding_source_id": self.get_default_payment_method().id
-            if not funding_source_id
-            else funding_source_id,
+            "funding_source_id": "",
             "action": action,
             "country_code": country_code,
             "target_type": target_type,
             "note": note,
-            "target_id": get_user_id(user=None, user_id=target_id),
-            "amount": amount,
+            "target_id": target_id,
+            "amount": round(amount * 100),
         }
 
         response = self.__api_client.call_api(
@@ -297,7 +294,7 @@ class PaymentApi(object):
                 funding_source_id = self.get_default_payment_method().id
             if not eligibility_token:
                 eligibility_token = self.__get_eligibility_token(
-                    amount, note, int(target_user_id)
+                    amount, note, target_user_id
                 ).eligibility_token
 
             body.update({"eligibility_token": eligibility_token})
