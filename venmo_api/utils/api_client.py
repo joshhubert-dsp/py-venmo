@@ -165,7 +165,7 @@ class ApiClient:
         self,
         method,
         url,
-        session,
+        session: requests.Session,
         header_params=None,
         params=None,
         body=None,
@@ -192,6 +192,7 @@ class ApiClient:
         )
 
         # Only accepts the 20x status codes.
+        # TODO any reason not to use response.raise_for_status
         validated_response = self.__validate_response(
             response, ok_error_codes=ok_error_codes
         )

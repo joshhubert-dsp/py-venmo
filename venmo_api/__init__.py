@@ -11,8 +11,8 @@ from .models.user import User
 from .models.mention import Mention
 from .models.comment import Comment
 from .models.transaction import Transaction
-from .models.payment import Payment, PaymentStatus
-from .models.payment_method import PaymentMethod, PaymentRole, PaymentPrivacy
+from .models.payment import Payment, PaymentPrivacy, PaymentRole, PaymentStatus
+from .models.payment import PaymentMethod
 from .models.page import Page
 from .utils.api_util import deserialize, wrap_callback, warn, get_user_id, confirm
 from .utils.api_client import ApiClient

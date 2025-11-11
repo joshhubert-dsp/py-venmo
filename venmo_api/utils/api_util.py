@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -6,8 +7,8 @@ from venmo_api import ArgumentMissingError, Page, User
 
 
 def deserialize(
-    response: dict, data_type: type[BaseModel], nested_response: list[str] = None
-) -> BaseModel:
+    response: dict, data_type: type[BaseModel], nested_response: list[str] | None = None
+) -> BaseModel | Page[BaseModel]:
     """Extract one or a list of Objects from the api_client structured response.
     :param response: <dict>
     :param data_type: <Generic>
@@ -34,7 +35,9 @@ def deserialize(
     return data_type.model_validate(data)
 
 
-def wrap_callback(callback, data_type, nested_response: list[str] = None):
+def wrap_callback(
+    callback, data_type: type[BaseModel], nested_response: list[str] | None = None
+):
     """
     :param callback: <function> Function that was provided by the user
     :param data_type: <class> It can be either User or Transaction
@@ -56,7 +59,9 @@ def wrap_callback(callback, data_type, nested_response: list[str] = None):
     return wrapper
 
 
-def __get_objs_from_json_list(json_list, data_type):
+def __get_objs_from_json_list(
+    json_list: list[Any], data_type: type[BaseModel]
+) -> Page[BaseModel]:
     """Process JSON for User/Transaction
     :param json_list: <list> a list of objs
     :param data_type: <class> User/Transaction/Payment/PaymentMethod
@@ -64,9 +69,7 @@ def __get_objs_from_json_list(json_list, data_type):
     """
     result = Page()
     for obj in json_list:
-        data_obj = data_type.from_json(obj)
-        if not data_obj:
-            continue
+        data_obj = data_type.model_validate(obj)
         result.append(data_obj)
 
     return result
