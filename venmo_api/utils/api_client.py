@@ -15,7 +15,7 @@ from venmo_api.utils import PROJECT_ROOT
 from venmo_api.utils.logging_session import LoggingSession
 
 
-class ApiClient(object):
+class ApiClient:
     """
     Generic API Client for the Venmo API
     """

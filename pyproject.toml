@@ -15,6 +15,7 @@ dependencies = [
     "devtools>=0.12.2",
     "loguru>=0.7.3",
     "orjson>=3.11.3",
+    "pydantic>=2.12.4",
     "requests>=2.19.0",
 ]
 

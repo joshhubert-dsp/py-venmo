@@ -1,9 +1,13 @@
 from enum import Enum
 
+from pydantic import BaseModel
+
 from venmo_api import ArgumentMissingError, Page, User
 
 
-def deserialize(response: dict, data_type, nested_response: list[str] = None):
+def deserialize(
+    response: dict, data_type: type[BaseModel], nested_response: list[str] = None
+) -> BaseModel:
     """Extract one or a list of Objects from the api_client structured response.
     :param response: <dict>
     :param data_type: <Generic>
@@ -27,7 +31,7 @@ def deserialize(response: dict, data_type, nested_response: list[str] = None):
     if isinstance(data, list):
         return __get_objs_from_json_list(json_list=data, data_type=data_type)
 
-    return data_type.from_json(json=data)
+    return data_type.model_validate(data)
 
 
 def wrap_callback(callback, data_type, nested_response: list[str] = None):

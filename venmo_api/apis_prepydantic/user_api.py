@@ -1,8 +1,9 @@
 from venmo_api import Page, Transaction, User, deserialize, get_user_id, wrap_callback
+from venmo_api.utils.api_client import ApiClient
 
 
 class UserApi(object):
-    def __init__(self, api_client):
+    def __init__(self, api_client: ApiClient):
         super().__init__()
         self.__api_client = api_client
         self.__profile = None
