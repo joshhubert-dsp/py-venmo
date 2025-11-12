@@ -1,18 +1,22 @@
 import os
-import threading
+from dataclasses import dataclass
 from json import JSONDecodeError
 from random import getrandbits
 
 import orjson
 import requests
+from requests.structures import CaseInsensitiveDict
 
-from venmo_api import (
-    HttpCodeError,
-    InvalidHttpMethodError,
-    ResourceNotFoundError,
-)
-from venmo_api.utils import PROJECT_ROOT
-from venmo_api.utils.logging_session import LoggingSession
+from venmo_api import PROJECT_ROOT
+from venmo_api.apis.exception import InvalidHttpMethodError, ResourceNotFoundError
+from venmo_api.apis.logging_session import LoggingSession
+
+
+@dataclass(frozen=True, slots=True)
+class ValidatedResponse:
+    status_code: int
+    headers: CaseInsensitiveDict
+    body: list | dict
 
 
 class ApiClient:
@@ -49,7 +53,7 @@ class ApiClient:
 
     def update_session_id(self):
         self._session_id = str(getrandbits(64))
-        # self.default_headers.update({"X-Session-ID": self._session_id})
+        self.default_headers.update({"X-Session-ID": self._session_id})
         self.session.headers.update({"X-Session-ID": self._session_id})
 
     def update_access_token(self, access_token: str):
@@ -69,51 +73,8 @@ class ApiClient:
         header_params: dict = None,
         params: dict = None,
         body: dict = None,
-        callback=None,
         ok_error_codes: list[int] = None,
-    ):
-        """
-        Makes the HTTP request (Synchronous) and return the deserialized data.
-        To make it async multi-threaded, define a callback function.
-
-        :param resource_path: <str> Specific Venmo API path
-        :param method: <str> HTTP request method
-        :param header_params: <dict> request headers
-        :param params: <dict> request parameters (?=)
-        :param body: <dict> request body will be send as JSON
-        :param callback: <function> Needs to be provided for async
-        :param ok_error_codes: <list[int]> A list of integer error codes that you don't want an exception for.
-        :return: response: <dict> {'status_code': <int>, 'headers': <dict>, 'body': <dict>}
-        """
-
-        if callback is None:
-            return self.__call_api(
-                resource_path=resource_path,
-                method=method,
-                header_params=header_params,
-                params=params,
-                body=body,
-                callback=callback,
-                ok_error_codes=ok_error_codes,
-            )
-        else:
-            thread = threading.Thread(
-                target=self.__call_api,
-                args=(resource_path, method, header_params, params, body, callback),
-            )
-        thread.start()
-        return thread
-
-    def __call_api(
-        self,
-        resource_path,
-        method,
-        header_params=None,
-        params=None,
-        body=None,
-        callback=None,
-        ok_error_codes: list[int] = None,
-    ):
+    ) -> ValidatedResponse:
         """
         Calls API on the provided path
 
@@ -121,7 +82,6 @@ class ApiClient:
         :param method: <str> HTTP request method
         :param header_params: <dict> request headers
         :param body: <dict> request body will be send as JSON
-        :param callback: <function> Needs to be provided for async
         :param ok_error_codes: <list[int]> A list of integer error codes that you don't want an exception for.
 
         :return: response: <dict> {'status_code': <int>, 'headers': <dict>, 'body': <dict>}
@@ -135,31 +95,18 @@ class ApiClient:
 
         url = self.configuration["host"] + resource_path
 
-        # Use a new session for multi-threaded
-        if callback:
-            session = requests.Session()
-            session.headers.update(self.default_headers)
-
-        else:
-            session = self.session
-
         # perform request and return response
         processed_response = self.request(
             method,
             url,
-            session,
+            self.session,
             header_params=header_params,
             params=params,
             body=body,
             ok_error_codes=ok_error_codes,
         )
-
         self.last_response = processed_response
-
-        if callback:
-            callback(processed_response)
-        else:
-            return processed_response
+        return processed_response
 
     def request(
         self,
@@ -170,7 +117,7 @@ class ApiClient:
         params=None,
         body=None,
         ok_error_codes: list[int] = None,
-    ):
+    ) -> ValidatedResponse:
         """
         Make a request with the provided information using a requests.session
         :param method:
@@ -191,50 +138,38 @@ class ApiClient:
             method=method, url=url, headers=header_params, params=params, json=body
         )
 
-        # Only accepts the 20x status codes.
-        # TODO any reason not to use response.raise_for_status
-        validated_response = self.__validate_response(
+        validated_response = self._validate_response(
             response, ok_error_codes=ok_error_codes
         )
 
         return validated_response
 
     @staticmethod
-    def __validate_response(response, ok_error_codes: list[int] = None):
+    def _validate_response(
+        response: requests.Response, ok_error_codes: list[int] = None
+    ) -> ValidatedResponse:
         """
         Validate and build a new validated response.
         :param response:
         :param ok_error_codes: <list[int]> A list of integer error codes that you don't want an exception for.
         :return:
         """
+        headers = response.headers
         try:
             body = response.json()
-            headers = response.headers
         except JSONDecodeError:
             body = {}
-            headers = {}
 
-        built_response = {
-            "status_code": response.status_code,
-            "headers": headers,
-            "body": body,
-        }
+        built_response = ValidatedResponse(response.status_code, headers, body)
 
-        if response.status_code in range(200, 205) and response.json:
+        if response.status_code in range(200, 205) or (
+            body and ok_error_codes and body.get("error").get("code") in ok_error_codes
+        ):
             return built_response
 
-        elif (
-            response.status_code == 400
-            and response.json().get("error").get("code") == 283
-        ):
+        elif response.status_code == 400 and body.get.get("error").get("code") == 283:
             raise ResourceNotFoundError()
 
         else:
-            if (
-                body
-                and ok_error_codes
-                and body.get("error").get("code") in ok_error_codes
-            ):
-                return built_response
-
-            raise HttpCodeError(response=response)
+            response.raise_for_status()
+            # raise HttpCodeError(response=response)

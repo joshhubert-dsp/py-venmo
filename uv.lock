@@ -76,6 +76,18 @@ wheels = [
 ]
 
 [[package]]
+name = "dinero"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/69/56/d5b5a2fd33c844be8c3a42ab42f95fb51a6297486966599fa25abc79776e/dinero-0.4.0.tar.gz", hash = "sha256:87b55cc17dd5a9a2acf7bd044d460c769f869100e3d5a286a7a94c065af84125", size = 20799, upload-time = "2025-05-18T21:43:02.487Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/0e/cca2c39fb429d465a1ea54038d6449a61ddd818d6b9886691b1aa184ba94/dinero-0.4.0-py3-none-any.whl", hash = "sha256:19f66e4fa7b1c7b9419bb1d942cf0a06c12c1f38b444b21cec510f5a9408c387", size = 52938, upload-time = "2025-05-18T21:43:01.004Z" },
+]
+
+[[package]]
 name = "executing"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -242,6 +254,7 @@ version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "devtools" },
+    { name = "dinero" },
     { name = "loguru" },
     { name = "orjson" },
     { name = "pydantic" },
@@ -251,6 +264,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "devtools", specifier = ">=0.12.2" },
+    { name = "dinero", specifier = ">=0.4.0" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "orjson", specifier = ">=3.11.3" },
     { name = "pydantic", specifier = ">=2.12.4" },

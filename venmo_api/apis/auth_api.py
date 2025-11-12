@@ -1,15 +1,21 @@
-from venmo_api import (
-    ApiClient,
-    AuthenticationFailedError,
-    confirm,
-    random_device_id,
-    warn,
-)
+import uuid
+
+from venmo_api.apis.api_client import ApiClient, ValidatedResponse
+from venmo_api.apis.api_util import confirm, warn
+from venmo_api.apis.exception import AuthenticationFailedError
+
+
+def random_device_id():
+    """
+    Generate a random device id that can be used for logging in.
+    :return:
+    """
+    return str(uuid.uuid4()).upper()
 
 
 # NOTE: it seems a device-id is required for payments now, so ApiClient should probably
 # own it
-class AuthenticationApi(object):
+class AuthenticationApi:
     TWO_FACTOR_ERROR_CODE = 81109
 
     def __init__(
@@ -18,7 +24,7 @@ class AuthenticationApi(object):
         super().__init__()
 
         self.__device_id = device_id or random_device_id()
-        self.__api_client = api_client or ApiClient(device_id=self.__device_id)
+        self._api_client = api_client or ApiClient(device_id=self.__device_id)
 
     def login_with_credentials_cli(self, username: str, password: str) -> str:
         """
@@ -41,11 +47,11 @@ class AuthenticationApi(object):
         response = self.authenticate_using_username_password(username, password)
 
         # if two-factor error
-        if response.get("body").get("error"):
-            access_token = self.__two_factor_process_cli(response=response)
+        if response.body.get("error"):
+            access_token = self._two_factor_process_cli(response=response)
             self.trust_this_device()
         else:
-            access_token = response["body"]["access_token"]
+            access_token = response.body["access_token"]
 
         confirm("Successfully logged in. Note your token and device-id")
         print(f"access_token: {access_token}\ndevice-id: {self.__device_id}")
@@ -68,14 +74,14 @@ class AuthenticationApi(object):
         confirm("Successfully logged out.")
         return True
 
-    def __two_factor_process_cli(self, response: dict) -> str:
+    def _two_factor_process_cli(self, response: ValidatedResponse) -> str:
         """
         Get response from authenticate_with_username_password for a CLI two-factor process
         :param response:
         :return: <str> access_token
         """
 
-        otp_secret = response["headers"].get("venmo-otp-secret")
+        otp_secret = response.headers.get("venmo-otp-secret")
         if not otp_secret:
             raise AuthenticationFailedError(
                 "Failed to get the otp-secret for the 2-factor authentication process. "
@@ -83,16 +89,16 @@ class AuthenticationApi(object):
             )
 
         self.send_text_otp(otp_secret=otp_secret)
-        user_otp = self.__ask_user_for_otp_password()
+        user_otp = self._ask_user_for_otp_password()
 
         access_token = self.authenticate_using_otp(user_otp, otp_secret)
-        self.__api_client.update_access_token(access_token=access_token)
+        self._api_client.update_access_token(access_token=access_token)
 
         return access_token
 
     def authenticate_using_username_password(
         self, username: str, password: str
-    ) -> dict:
+    ) -> ValidatedResponse:
         """
         Authenticate with username and password. Raises exception if either be incorrect.
         Check returned response:
@@ -111,7 +117,7 @@ class AuthenticationApi(object):
             "password": password,
         }
 
-        return self.__api_client.call_api(
+        return self._api_client.call_api(
             resource_path=resource_path,
             header_params=header_params,
             body=body,
@@ -119,7 +125,7 @@ class AuthenticationApi(object):
             ok_error_codes=[self.TWO_FACTOR_ERROR_CODE],
         )
 
-    def send_text_otp(self, otp_secret: str) -> dict:
+    def send_text_otp(self, otp_secret: str) -> ValidatedResponse:
         """
         Send one-time-password to user phone-number
         :param otp_secret: <str> the otp-secret from response_headers.venmo-otp-secret
@@ -130,17 +136,17 @@ class AuthenticationApi(object):
         header_params = {"device-id": self.__device_id, "venmo-otp-secret": otp_secret}
         body = {"via": "sms"}
 
-        response = self.__api_client.call_api(
+        response = self._api_client.call_api(
             resource_path=resource_path,
             header_params=header_params,
             body=body,
             method="POST",
         )
 
-        if response["status_code"] != 200:
+        if response.status_code != 200:
             reason = None
             try:
-                reason = response["body"]["error"]["message"]
+                reason = response.body["error"]["message"]
             finally:
                 raise AuthenticationFailedError(
                     f"Failed to send the One-Time-Password to"
@@ -165,13 +171,13 @@ class AuthenticationApi(object):
         }
         params = {"client_id": 1}
 
-        response = self.__api_client.call_api(
+        response = self._api_client.call_api(
             resource_path=resource_path,
             header_params=header_params,
             params=params,
             method="POST",
         )
-        return response["body"]["access_token"]
+        return response.body["access_token"]
 
     def trust_this_device(self, device_id=None):
         """
@@ -182,7 +188,7 @@ class AuthenticationApi(object):
         header_params = {"device-id": device_id}
         resource_path = "/users/devices"
 
-        self.__api_client.call_api(
+        self._api_client.call_api(
             resource_path=resource_path, header_params=header_params, method="POST"
         )
 
@@ -195,10 +201,10 @@ class AuthenticationApi(object):
         return self.__device_id
 
     def set_access_token(self, access_token):
-        self.__api_client.update_access_token(access_token=access_token)
+        self._api_client.update_access_token(access_token=access_token)
 
     @staticmethod
-    def __ask_user_for_otp_password():
+    def _ask_user_for_otp_password():
         otp = ""
         while len(otp) < 6 or not otp.isdigit():
             otp = input(

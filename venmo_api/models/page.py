@@ -1,4 +1,6 @@
 class Page(list):
+    """fancy list that calls it's own next-in-line"""
+
     def __init__(self):
         super().__init__()
         self.method = None

@@ -2,13 +2,17 @@ from datetime import datetime
 from enum import StrEnum, auto
 from typing import Any, Literal
 
-from pydantic import AliasPath, BaseModel, Field
+from pydantic import (
+    AliasPath,
+    BaseModel,
+    Field,
+)
 
-from venmo_api import BaseModel
-from venmo_api.models.user import User
+from venmo_api.models.us_dollars import UsDollars
+from venmo_api.models.user import PaymentPrivacy, User
 
 
-# --- REQUEST PARAM ENUMS ---
+# ---  ENUMS ---
 class PaymentStatus(StrEnum):
     SETTLED = auto()
     CANCELLED = auto()
@@ -18,35 +22,21 @@ class PaymentStatus(StrEnum):
     EXPIRED = auto()
 
 
-class PaymentAction:
+class PaymentAction(StrEnum):
     PAY = auto()
     CHARGE = auto()
 
 
-class PaymentUpdate:
-    REMIND = auto()
-    CANCEL = auto()
-
-
-# -- RESPONSE FIELD ENUMS ---
-
-
-class PaymentRole(StrEnum):
+class PaymentMethodRole(StrEnum):
     DEFAULT = auto()
     BACKUP = auto()
     NONE = auto()
 
 
-class PaymentPrivacy(StrEnum):
-    PRIVATE = auto()
-    PUBLIC = auto()
-    FRIENDS = auto()
-
-
-class PaymentType(StrEnum):
+class PaymentMethodType(StrEnum):
     BANK = auto()
     BALANCE = auto()
-    CARDs = auto()
+    CARD = auto()
 
 
 # --- MODELS ---
@@ -55,7 +45,7 @@ class PaymentType(StrEnum):
 class Fee(BaseModel):
     product_uri: str
     applied_to: str
-    base_fee_amount: float
+    base_fee_amount: UsDollars
     fee_percentage: float
     calculated_fee_amount_in_cents: int
     fee_token: str
@@ -74,28 +64,28 @@ class Payment(BaseModel):
     id: str
     status: PaymentStatus
     action: PaymentAction
-    amount: float
+    amount: UsDollars | None
     date_created: datetime
-    audience: PaymentPrivacy
+    audience: PaymentPrivacy | None = None
     note: str
-    target: User = Field(validation_alias=AliasPath("user"))
+    target: User = Field(validation_alias=AliasPath("target", "user"))
     actor: User
     date_completed: datetime | None
     date_reminded: datetime | None
     # TODO figure these out
-    refund: Any | None
-    fee: Fee | None
+    refund: Any | None = None
+    fee: Fee | None = None
 
 
 class PaymentMethod(BaseModel):
     id: str
-    type: PaymentType
+    type: PaymentMethodType
     name: str
     last_four: str | None
-    peer_payment_role: PaymentRole
-    merchant_payment_role: PaymentRole
-    top_up_role: PaymentRole
-    default_transfer_destination: Literal["default"] | None = None
+    peer_payment_role: PaymentMethodRole
+    merchant_payment_role: PaymentMethodRole
+    top_up_role: Literal["eligible", "none"]
+    default_transfer_destination: Literal["default", "eligible", "none"]
     fee: Fee | None
     # TODO maybe bank_account: BankAccount | None
     # card: Card | None
@@ -105,7 +95,7 @@ class PaymentMethod(BaseModel):
 
 class TransferDestination(BaseModel):
     id: str
-    type: PaymentType
+    type: PaymentMethodType
     name: str
     last_four: str | None
     is_default: bool
@@ -115,7 +105,7 @@ class TransferDestination(BaseModel):
 
 class TransferPostResponse(BaseModel):
     id: str
-    amount: float
+    amount: UsDollars
     amount_cents: int
     amount_fee_cents: int
     amount_requested_cents: int

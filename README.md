@@ -1,6 +1,6 @@
 # Venmo API
 
-Disclaimer: This is an individual effort and is not PayPal/Venmo sponsored or maintained. 
+Disclaimer: This is an individual effort and is not PayPal/Venmo sponsored or maintained.
 
 ## Introduction
 
@@ -41,7 +41,7 @@ print("My token:", access_token)
 
 The following is an example of initializing and working with the api client.
 
- ```python
+```python
 access_token = "YOUR_ACCESS_TOKEN"
 
 # Initialize api client using an access-token
@@ -50,17 +50,9 @@ client = Client(access_token=access_token)
 # Search for users. You get a maximum of 50 results per request.
 users = client.user.search_for_users(query="Peter")
 for user in users:
-    print(user.username)
+   print(user.username)
+```
 
-# Or pass a callback to make it multi-threaded
-def callback(users):
-    for user in users:
-        print(user.username)
-
-client.user.search_for_users(query="peter",
-                             callback=callback,
-                             limit=10)
- ```
 ##### Revoke token
 
 Keep this in mind that your access token never expires! You will need to revoke it yoursef:
@@ -69,17 +61,15 @@ Keep this in mind that your access token never expires! You will need to revoke 
 client.log_out("Bearer a40fsdfhsfhdsfjhdkgljsdglkdsfj3j3i4349t34j7d")
 ```
 
-
-
 ##### Payment methods
 
 Get all your payment methods to use one's id for sending_money
 
-````python
+```python
 payment_methods = client.payment.get_payment_methods()
 for payment_method in payment_methods:
     print(payment_method.to_json())
-````
+```
 
 ##### Sending or requesting money
 
@@ -101,13 +91,9 @@ client.payment.send_money(amount=13.68,
 Getting a user's transactions (only the ones that are visible to you, e.g, their `public` transactions)
 
 ```python
-def callback(transactions_list):
-    for transaction in transactions_list:
-        print(transaction)
 
-# callback is optional. Max number of transactions per request is 50.
-client.user.get_user_transactions(user_id='0000000000000000000',
-                                     callback=callback)
+# Max number of transactions per request is 50.
+client.user.get_user_transactions(user_id='0000000000000000000')
 ```
 
 ##### Friends list
@@ -140,7 +126,7 @@ while transactions:
 
 ## Contributing
 
-Contributions of all sizes are welcome. You can help with the wrapper documentation located in /docs. You can also help by [reporting bugs](https://github.com/mmohades/VenmoApi/issues/new). You can add more routes to both  [Venmo Unofficial API Documentation](https://github.com/mmohades/VenmoApiDocumentation) and the `venmo-api` wrapper. 
+Contributions of all sizes are welcome. You can help with the wrapper documentation located in /docs. You can also help by [reporting bugs](https://github.com/mmohades/VenmoApi/issues/new). You can add more routes to both [Venmo Unofficial API Documentation](https://github.com/mmohades/VenmoApiDocumentation) and the `venmo-api` wrapper.
 
 ## Venmo Unofficial API Documentation
 

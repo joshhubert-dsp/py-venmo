@@ -1,5 +1,7 @@
 from typing import Self
 
+from loguru import logger
+
 from venmo_api import ApiClient, AuthenticationApi, PaymentApi, UserApi
 
 
@@ -56,8 +58,13 @@ class Client(object):
                 self.__api_client.update_access_token(access_token)
 
         self.user = UserApi(self.__api_client)
-        self.__profile = self.user.get_my_profile()
-        self.payment = PaymentApi(profile=self.__profile, api_client=self.__api_client)
+        self._profile = self.user.get_my_profile()
+        # logger.info(pformat(self.__profile))
+        self.__balance = self.user.get_my_balance()
+        logger.info(f"{self.__balance=}")
+        self.payment = PaymentApi(
+            profile=self._profile, api_client=self.__api_client, balance=self.__balance
+        )
 
     def my_profile(self, force_update=False):
         """
@@ -65,9 +72,19 @@ class Client(object):
         :return:
         """
         if force_update:
-            self.__profile = self.user.get_my_profile(force_update=force_update)
+            self._profile = self.user.get_my_profile(force_update=force_update)
 
-        return self.__profile
+        return self._profile
+
+    def my_balance(self, force_update=False):
+        """
+        Get your profile info. It can be cached from the prev time.
+        :return:
+        """
+        if force_update:
+            self.__balance = self.user.get_my_balance(force_update=force_update)
+
+        return self.__balance
 
     @property
     def access_token(self) -> str | None:

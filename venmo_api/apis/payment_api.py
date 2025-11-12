@@ -1,64 +1,59 @@
 import uuid
-from typing import Callable
+from typing import Literal
 
-from typing_extensions import Literal
-
-from venmo_api import (
+from venmo_api.apis.api_client import ApiClient, ValidatedResponse
+from venmo_api.apis.api_util import deserialize
+from venmo_api.apis.exception import (
     AlreadyRemindedPaymentError,
-    ApiClient,
     ArgumentMissingError,
     GeneralPaymentError,
     NoPaymentMethodFoundError,
     NoPendingPaymentToUpdateError,
     NotEnoughBalanceError,
-    Payment,
-    deserialize,
-    get_user_id,
-    wrap_callback,
 )
 from venmo_api.models.page import Page
 from venmo_api.models.payment import (
     EligibilityToken,
+    Payment,
     PaymentAction,
     PaymentMethod,
-    PaymentPrivacy,
-    PaymentRole,
-    PaymentUpdate,
+    PaymentMethodRole,
     TransferDestination,
     TransferPostResponse,
 )
-from venmo_api.models.user import User
+from venmo_api.models.user import PaymentPrivacy, User
 
 
-class PaymentApi(object):
-    def __init__(self, profile: User, api_client: ApiClient):
+class PaymentApi:
+    def __init__(
+        self, profile: User, api_client: ApiClient, balance: float | None = None
+    ):
         super().__init__()
-        self.__profile = profile
-        self.__api_client = api_client
-        self.__payment_error_codes = {
+        self._profile = profile
+        self._balance = balance
+        self._api_client = api_client
+        self._payment_error_codes = {
             "already_reminded_error": 2907,
             "no_pending_payment_error": 2901,
             "no_pending_payment_error2": 2905,
             "not_enough_balance_error": 13006,
         }
 
-    def get_charge_payments(self, limit=100000, callback=None) -> Page[Payment]:
+    def get_charge_payments(self, limit=100000) -> Page[Payment]:
         """
         Get a list of charge ongoing payments (pending request money)
         :param limit:
-        :param callback:
         :return:
         """
-        return self.__get_payments(action="charge", limit=limit, callback=callback)
+        return self._get_payments(action="charge", limit=limit)
 
-    def get_pay_payments(self, limit=100000, callback=None) -> Page[Payment]:
+    def get_pay_payments(self, limit=100000) -> Page[Payment]:
         """
         Get a list of pay ongoing payments (pending requested money from your profile)
         :param limit:
-        :param callback:
         :return:
         """
-        return self.__get_payments(action="pay", limit=limit, callback=callback)
+        return self._get_payments(action="pay", limit=limit)
 
     def remind_payment(self, payment: Payment = None, payment_id: int = None) -> bool:
         """
@@ -71,18 +66,15 @@ class PaymentApi(object):
         # if the reminder has already sent
         payment_id = payment_id or payment.id
         action = "remind"
-
-        response = self.__update_payment(action=action, payment_id=payment_id)
+        response = self._update_payment(action=action, payment_id=payment_id)
 
         # if the reminder has already sent
-        if "error" in response.get("body"):
+        if "error" in response.body:
             if (
-                response["body"]["error"]["code"]
-                == self.__payment_error_codes["no_pending_payment_error2"]
+                response.body["error"]["code"]
+                == self._payment_error_codes["no_pending_payment_error2"]
             ):
-                raise NoPendingPaymentToUpdateError(
-                    payment_id=payment_id, action=action
-                )
+                raise NoPendingPaymentToUpdateError(payment_id, action)
             raise AlreadyRemindedPaymentError(payment_id=payment_id)
         return True
 
@@ -94,50 +86,32 @@ class PaymentApi(object):
         :return: True or raises NoPendingPaymentToCancelError
         """
         # if the reminder has already sent
-        payment_id = payment_id or payment.id
         action = "cancel"
+        payment_id = payment_id or payment.id
+        response = self._update_payment(action=action, payment_id=payment_id)
 
-        response = self.__update_payment(action=action, payment_id=payment_id)
-
-        if "error" in response.get("body"):
-            raise NoPendingPaymentToUpdateError(payment_id=payment_id, action=action)
+        if "error" in response.body:
+            raise NoPendingPaymentToUpdateError(payment_id, action)
         return True
 
-    def get_payment_methods(self, callback=None) -> Page[PaymentMethod] | None:
+    def get_payment_methods(self) -> Page[PaymentMethod]:
         """
         Get a list of available payment_methods
-        :param callback:
         :return:
         """
-
-        wrapped_callback = wrap_callback(callback=callback, data_type=PaymentMethod)
-
-        resource_path = "/payment-methods"
-        response = self.__api_client.call_api(
-            resource_path=resource_path, method="GET", callback=wrapped_callback
+        response = self._api_client.call_api(
+            resource_path="/payment-methods", method="GET"
         )
-        # return the thread
-        if callback:
-            return
-
         return deserialize(response=response, data_type=PaymentMethod)
-
-    def get_standard_transfer_destinations(self) -> Page[TransferDestination]:
-        return self.__get_transfer_destinations("standard")
-
-    def get_instant_transfer_destinations(self) -> Page[TransferDestination]:
-        return self.__get_transfer_destinations("instant")
 
     def send_money(
         self,
         amount: float,
         note: str,
-        target_user_id: int = None,
+        target_user_id: str,
         funding_source_id: str = None,
-        target_user: User = None,
         privacy_setting: PaymentPrivacy = PaymentPrivacy.PRIVATE,
-        callback=None,
-    ) -> bool | None:
+    ) -> Payment:
         """
         send [amount] money with [note] to the ([target_user_id] or [target_user]) from the [funding_source_id]
         If no [funding_source_id] is provided, it will find the default source_id and uses that.
@@ -147,30 +121,25 @@ class PaymentApi(object):
         :param privacy_setting: <PaymentPrivacy> PRIVATE/FRIENDS/PUBLIC (enum)
         :param target_user_id: <str>
         :param target_user: <User>
-        :param callback: <function> Passing callback will run it in a distinct thread, and returns Thread
         :return: <bool> Either the transaction was successful or an exception will rise.
         """
 
-        return self.__send_or_request_money(
+        return self._send_or_request_money(
             amount=amount,
             note=note,
             is_send_money=True,
             funding_source_id=funding_source_id,
-            privacy_setting=privacy_setting.value,
             target_user_id=target_user_id,
-            target_user=target_user,
-            callback=callback,
+            privacy_setting=privacy_setting.value,
         )
 
     def request_money(
         self,
         amount: float,
         note: str,
-        target_user_id: int = None,
+        target_user_id: str,
         privacy_setting: PaymentPrivacy = PaymentPrivacy.PRIVATE,
-        target_user: User = None,
-        callback=None,
-    ) -> bool | None:
+    ) -> Payment:
         """
         Request [amount] money with [note] from the ([target_user_id] or [target_user])
         :param amount: <float> amount of money to be requested
@@ -178,26 +147,41 @@ class PaymentApi(object):
         :param privacy_setting: <PaymentPrivacy> PRIVATE/FRIENDS/PUBLIC (enum)
         :param target_user_id: <str> the user id of the person you are asking the money from
         :param target_user: <User> The user object or user_id is required
-        :param callback: callback function
         :return: <bool> Either the transaction was successful or an exception will rise.
         """
-        return self.__send_or_request_money(
+        return self._send_or_request_money(
             amount=amount,
             note=note,
             is_send_money=False,
             funding_source_id=None,
-            privacy_setting=privacy_setting.value,
             target_user_id=target_user_id,
-            target_user=target_user,
-            callback=callback,
+            privacy_setting=privacy_setting.value,
+        )
+
+    def get_transfer_destinations(
+        self, trans_type: Literal["standard", "instant"]
+    ) -> Page[TransferDestination]:
+        """
+        Get a list of available transfer destination options for the given type
+        :return:
+        """
+        resource_path = "/transfers/options"
+        response = self._api_client.call_api(resource_path=resource_path, method="GET")
+        return deserialize(
+            response, TransferDestination, [trans_type, "eligible_destinations"]
         )
 
     def initiate_transfer(
         self,
-        amount: float,
         destination_id: str,
+        amount: float | None = None,
         trans_type: Literal["standard", "instant"] = "standard",
     ) -> TransferPostResponse:
+        if amount is None and self._balance is not None:
+            amount = self._balance
+        else:
+            raise ValueError("must pass a transfer amount if no balance available")
+
         amount_cents = round(amount * 100)
         body = {
             "amount": amount_cents,
@@ -206,10 +190,8 @@ class PaymentApi(object):
             # TODO should this have a fee subtracted? don't feel like testing
             "final_amount": amount_cents,
         }
-
-        resource_path = "/transfers"
-        response = self.__api_client.call_api(
-            resource_path=resource_path, body=body, method="POST"
+        response = self._api_client.call_api(
+            resource_path="/transfers", body=body, method="POST"
         )
         return deserialize(response, TransferPostResponse)
 
@@ -224,12 +206,14 @@ class PaymentApi(object):
             if not p_method:
                 continue
 
-            if p_method.role == PaymentRole.DEFAULT:
+            if p_method.role == PaymentMethodRole.DEFAULT:
                 return p_method
 
         raise NoPaymentMethodFoundError()
 
-    def __get_eligibility_token(
+    # --- HELPERS ---
+
+    def _get_eligibility_token(
         self,
         amount: float,
         note: str,
@@ -237,7 +221,6 @@ class PaymentApi(object):
         action: str = "pay",
         country_code: str = "1",
         target_type: str = "user_id",
-        callback=None,
     ) -> EligibilityToken:
         """
         Generate eligibility token which is needed in payment requests
@@ -249,7 +232,6 @@ class PaymentApi(object):
         :param country_code: <str> country code, not sure what this is for
         :param target_type: <str> set by default to user_id, but there are probably other target types
         """
-        resource_path = "/protection/eligibility"
         body = {
             "funding_source_id": "",
             "action": action,
@@ -259,63 +241,47 @@ class PaymentApi(object):
             "target_id": target_id,
             "amount": round(amount * 100),
         }
-
-        response = self.__api_client.call_api(
-            resource_path=resource_path, body=body, method="POST"
+        response = self._api_client.call_api(
+            resource_path="/protection/eligibility", body=body, method="POST"
         )
-        if callback:
-            return
-
         return deserialize(response=response, data_type=EligibilityToken)
 
-    def __update_payment(self, action: PaymentUpdate, payment_id: str) -> Payment:
+    def _update_payment(
+        self, action: Literal["remind", "cancel"], payment_id: str
+    ) -> ValidatedResponse:
         if not payment_id:
             raise ArgumentMissingError(arguments=("payment", "payment_id"))
 
-        resource_path = f"/payments/{payment_id}"
-        body = {"action": action}
-        response = self.__api_client.call_api(
-            resource_path=resource_path,
-            body=body,
+        return self._api_client.call_api(
+            resource_path=f"/payments/{payment_id}",
+            body={"action": action},
             method="PUT",
-            ok_error_codes=list(self.__payment_error_codes.values())[:-1],
+            ok_error_codes=list(self._payment_error_codes.values())[:-1],
         )
-        return deserialize(response=response, data_type=Payment)
 
-    def __get_payments(
-        self, action: PaymentAction, limit: int, callback: Callable | None = None
-    ) -> Page[Payment]:
+    def _get_payments(self, action: PaymentAction, limit: int) -> Page[Payment]:
         """
         Get a list of ongoing payments with the given action
         :return:
         """
-        wrapped_callback = wrap_callback(callback=callback, data_type=Payment)
-
-        resource_path = "/payments"
-        parameters = {"action": action, "actor": self.__profile.id, "limit": limit}
-        # params `status: pending,held`
-        response = self.__api_client.call_api(
-            resource_path=resource_path,
+        parameters = {"action": action, "actor": self._profile.id, "limit": limit}
+        # other params `status: pending,held`
+        response = self._api_client.call_api(
+            resource_path="/payments",
             params=parameters,
             method="GET",
-            callback=wrapped_callback,
         )
-        if callback:
-            return
-
         return deserialize(response=response, data_type=Payment)
 
-    def __send_or_request_money(
+    def _send_or_request_money(
         self,
         amount: float,
         note: str,
         is_send_money: bool,
         funding_source_id: str,
+        target_user_id: str,
         privacy_setting: PaymentPrivacy = PaymentPrivacy.PRIVATE,
-        target_user_id: str | None = None,
-        target_user: User | None = None,
         eligibility_token: str | None = None,
-        callback=None,
     ) -> Payment | None:
         """
         Generic method for sending and requesting money
@@ -325,12 +291,9 @@ class PaymentApi(object):
         :param funding_source_id:
         :param privacy_setting:
         :param target_user_id:
-        :param target_user:
         :param eligibility_token:
-        :param callback:
         :return:
         """
-        target_user_id = str(get_user_id(target_user, target_user_id))
 
         amount = abs(amount)
         if not is_send_money:
@@ -340,7 +303,7 @@ class PaymentApi(object):
             "uuid": str(uuid.uuid4()),
             "user_id": target_user_id,
             "audience": privacy_setting,
-            "amount": amount,
+            "amount": round(amount, 2),
             "note": note,
         }
 
@@ -348,49 +311,23 @@ class PaymentApi(object):
             if not funding_source_id:
                 funding_source_id = self.get_default_payment_method().id
             if not eligibility_token:
-                eligibility_token = self.__get_eligibility_token(
+                eligibility_token = self._get_eligibility_token(
                     amount, note, target_user_id
                 ).eligibility_token
-
             body.update({"eligibility_token": eligibility_token})
             body.update({"funding_source_id": funding_source_id})
 
-        resource_path = "/payments"
-        nested_response = ["payment"]
-        wrapped_callback = wrap_callback(callback, Payment, nested_response)
-
-        response = self.__api_client.call_api(
-            resource_path=resource_path,
-            method="POST",
-            body=body,
-            callback=wrapped_callback,
+        response = self._api_client.call_api(
+            resource_path="/payments", method="POST", body=body
         )
         # handle 200 status code errors
-        error_code = response["body"]["data"].get("error_code")
+        error_code = response.body["data"].get("error_code")
         if error_code:
-            if error_code == self.__payment_error_codes["not_enough_balance_error"]:
+            if error_code == self._payment_error_codes["not_enough_balance_error"]:
                 raise NotEnoughBalanceError(amount, target_user_id)
 
-            error = response["body"]["data"]
+            error = response.body["data"]
             raise GeneralPaymentError(f"{error.get('title')}\n{error.get('error_msg')}")
 
-        if callback:
-            return
         # if no exception raises, then it was successful
-        return deserialize(response, Payment, nested_response)
-
-    def __get_transfer_destinations(
-        self, trans_type: Literal["standard", "instant"]
-    ) -> Page[TransferDestination]:
-        """
-        Get a list of available transfer destination options for the given type
-        :param callback:
-        :return:
-        """
-
-        resource_path = "/transfers/options"
-        response = self.__api_client.call_api(
-            resource_path=resource_path,
-            method="GET",
-        )
-        return deserialize(response, TransferDestination, [trans_type])
+        return deserialize(response, Payment, nested_response=["payment"])
