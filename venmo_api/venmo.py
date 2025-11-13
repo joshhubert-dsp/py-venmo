@@ -1,9 +1,18 @@
+import os
 from typing import Self
 
 from venmo_api import ApiClient, AuthenticationApi, PaymentApi, UserApi
 
 
 class Client:
+    @staticmethod
+    def login_from_env(
+        username_env: str, password_env: str, device_id_env: str
+    ) -> Self:
+        return Client.login(
+            os.getenv(username_env), os.getenv(password_env), os.getenv(device_id_env)
+        )
+
     @staticmethod
     def login(username: str, password: str, device_id: str | None = None) -> Self:
         """
