@@ -1,6 +1,6 @@
 # Python Venmo API - Updated Fork
 
-This is as a fork of mmohades' [python venmo api] (https://github.com/mmohades/Venmo.git)
+This is as a fork of mmohades' [python venmo api](https://github.com/mmohades/Venmo.git)
 package, which is no longer maintained, and therefore some features/payloads (notably
 payments) no longer worked. I took the liberty of fixing payment functionality, adding
 additional endpoints, and refactoring it almost beyond recognition. To be specific, this
