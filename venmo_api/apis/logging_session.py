@@ -1,14 +1,14 @@
 import orjson
 from devtools import pformat
-from loguru import logger
 from requests import PreparedRequest, Response, Session
+from rich import print
 
 MAX_BODY_LOG = 1024 * 100  # 100 KB limit to avoid OOM in logs; tweak as needed
 
 
-def safe_text(b: bytes | None, fallback_repr=True):
+def safe_text(b: bytes | None, fallback_repr=True) -> str:
     if b is None:
-        return "<none>"
+        return "None"
     try:
         text = b.decode("utf-8")
         if len(text) <= MAX_BODY_LOG:
@@ -24,30 +24,35 @@ def safe_text(b: bytes | None, fallback_repr=True):
 
 
 class LoggingSession(Session):
+    """
+    requests.Session subclass that pretty-logs its requests and responses using
+    rich.print
+    """
+
     def send(self, request: PreparedRequest, **kwargs) -> Response:
-        logger.debug(f"→ {request.method} {request.url}")
-        logger.trace(f"→ Request headers: {pformat(dict(request.headers))}")
+        print(f"\n→ REQUEST: {request.method} {request.url}")
+        print(f"→ Request headers: {pformat(dict(request.headers))}")
+
         body = request.body
         if isinstance(body, str):
-            logger.trace(f"→ Request body (str): {pformat(safe_text(body.encode()))}")
+            print(f"→ Request body (str): {pformat(safe_text(body.encode()))}")
         elif isinstance(body, bytes):
-            logger.trace(f"→ Request body (bytes): {pformat(safe_text(body))}")
+            print(f"→ Request body (bytes): {pformat(safe_text(body))}")
         elif body is None:
-            logger.trace("→ Request body: <none>")
+            print("→ Request body: None")
         else:
             # could be generator/iterable (multipart streaming)
-            logger.trace(f"→ Request body: (type={type(body).__name__}) {repr(body)}")
+            print(f"→ Request body: (type={type(body).__name__}) {repr(body)}")
 
         resp = super().send(request, **kwargs)
 
-        logger.debug(f"← {resp.status_code} {resp.reason}")
-        logger.trace(f"← Response headers: {pformat(dict(resp.headers))}")
+        print(f"← RESPONSE: {resp.status_code} {resp.reason}")
+        print(f"← Response headers: {pformat(dict(resp.headers))}")
 
-        # careful: .content will load the whole response into memory
         try:
             content = resp.content
-            logger.trace(f"← Response body: {pformat(safe_text(content))}")
+            print(f"← Response body: {pformat(safe_text(content))}")
         except Exception as e:
-            logger.trace(f"← Response body: <unreadable: {e}>")
+            print(f"← Response body: <unreadable: {e}>")
 
         return resp

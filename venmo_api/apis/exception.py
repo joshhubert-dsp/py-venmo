@@ -57,29 +57,6 @@ class HttpCodeError(Exception):
         super(HttpCodeError, self).__init__(self.msg)
 
 
-# ======= Methods Exceptions =======
-
-
-class InvalidArgumentError(Exception):
-    """Raised when there is an invalid argument passed into a method"""
-
-    def __init__(self, msg: str = None, argument_name: str = None, reason=None):
-        self.msg = msg or f"Invalid argument {argument_name} was passed. " + (
-            reason or ""
-        )
-        super(InvalidArgumentError, self).__init__(self.msg)
-
-
-class ArgumentMissingError(Exception):
-    """Raised when there is an argument missing in a function"""
-
-    def __init__(self, msg: str = None, arguments: tuple = None, reason=None):
-        self.msg = msg or f"One of {arguments} must be passed to this method." + (
-            reason or ""
-        )
-        super(ArgumentMissingError, self).__init__(self.msg)
-
-
 # ======= Payment =======
 
 
@@ -121,9 +98,7 @@ class GeneralPaymentError(Exception):
 
 __all__ = [
     "AuthenticationFailedError",
-    "InvalidArgumentError",
     "InvalidHttpMethodError",
-    "ArgumentMissingError",
     "JSONDecodeError",
     "ResourceNotFoundError",
     "HttpCodeError",

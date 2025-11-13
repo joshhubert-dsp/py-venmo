@@ -1,8 +1,7 @@
-from venmo_api.apis.api_client import ApiClient, ValidatedResponse
-from venmo_api.apis.api_util import deserialize
+from venmo_api.apis.api_client import ApiClient
+from venmo_api.apis.api_util import ValidatedResponse, deserialize
 from venmo_api.models.page import Page
 from venmo_api.models.transaction import Transaction
-from venmo_api.models.us_dollars import UsDollars
 from venmo_api.models.user import User
 
 
@@ -34,7 +33,7 @@ class UserApi:
             return self._balance
 
         response = self.__api_client.call_api(resource_path="/account", method="GET")
-        self._balance = deserialize(response, UsDollars, nested_response=["balance"])
+        self._balance = deserialize(response, float, nested_response=["balance"])
         return self._balance
 
     # --- USERS ---
@@ -219,7 +218,6 @@ class UserApi:
         before_id: str | None,
     ) -> ValidatedResponse | None:
         """ """
-        # TODO more?
         params = {
             "limit": limit,
             "social_only": str(social_only).lower(),

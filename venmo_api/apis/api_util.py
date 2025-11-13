@@ -1,10 +1,18 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel
+from requests.structures import CaseInsensitiveDict
 
-from venmo_api.apis.api_client import ValidatedResponse
 from venmo_api.models.page import Page
+
+
+@dataclass(frozen=True, slots=True)
+class ValidatedResponse:
+    status_code: int
+    headers: CaseInsensitiveDict
+    body: list | dict
 
 
 def deserialize(

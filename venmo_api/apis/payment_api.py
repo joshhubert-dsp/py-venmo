@@ -1,11 +1,10 @@
 import uuid
 from typing import Literal
 
-from venmo_api.apis.api_client import ApiClient, ValidatedResponse
-from venmo_api.apis.api_util import deserialize
+from venmo_api.apis.api_client import ApiClient
+from venmo_api.apis.api_util import ValidatedResponse, deserialize
 from venmo_api.apis.exception import (
     AlreadyRemindedPaymentError,
-    ArgumentMissingError,
     GeneralPaymentError,
     NoPaymentMethodFoundError,
     NoPendingPaymentToUpdateError,
@@ -55,16 +54,13 @@ class PaymentApi:
         """
         return self._get_payments(action="pay", limit=limit)
 
-    def remind_payment(self, payment: Payment = None, payment_id: int = None) -> bool:
+    def remind_payment(self, payment_id: str) -> bool:
         """
         Send a reminder for payment/payment_id
         :param payment: either payment object or payment_id must be be provided
         :param payment_id:
         :return: True or raises AlreadyRemindedPaymentError
         """
-
-        # if the reminder has already sent
-        payment_id = payment_id or payment.id
         action = "remind"
         response = self._update_payment(action=action, payment_id=payment_id)
 
@@ -78,18 +74,15 @@ class PaymentApi:
             raise AlreadyRemindedPaymentError(payment_id=payment_id)
         return True
 
-    def cancel_payment(self, payment: Payment = None, payment_id: int = None) -> bool:
+    def cancel_payment(self, payment_id: str) -> bool:
         """
-        Cancel the payment/payment_id provided. Only applicable to payments you have access to (requested payments)
+        Cancel the payment_id provided. Only applicable to payments you have access to (requested payments)
         :param payment:
         :param payment_id:
         :return: True or raises NoPendingPaymentToCancelError
         """
-        # if the reminder has already sent
         action = "cancel"
-        payment_id = payment_id or payment.id
         response = self._update_payment(action=action, payment_id=payment_id)
-
         if "error" in response.body:
             raise NoPendingPaymentToUpdateError(payment_id, action)
         return True
@@ -165,8 +158,9 @@ class PaymentApi:
         Get a list of available transfer destination options for the given type
         :return:
         """
-        resource_path = "/transfers/options"
-        response = self._api_client.call_api(resource_path=resource_path, method="GET")
+        response = self._api_client.call_api(
+            resource_path="/transfers/options", method="GET"
+        )
         return deserialize(
             response, TransferDestination, [trans_type, "eligible_destinations"]
         )
@@ -249,9 +243,6 @@ class PaymentApi:
     def _update_payment(
         self, action: Literal["remind", "cancel"], payment_id: str
     ) -> ValidatedResponse:
-        if not payment_id:
-            raise ArgumentMissingError(arguments=("payment", "payment_id"))
-
         return self._api_client.call_api(
             resource_path=f"/payments/{payment_id}",
             body={"action": action},

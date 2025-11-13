@@ -7,7 +7,7 @@ from pydantic import AliasPath, BaseModel, BeforeValidator, Field
 from venmo_api.models.payment import Payment
 from venmo_api.models.user import PaymentPrivacy, User
 
-DEVICE_MAP = {1: "iPhone", 4: "Android", 0: "Other"}
+DEVICE_MAP = {1: "iPhone", 4: "Android", 10: "Desktop Browser", 0: "Other"}
 
 
 def get_device_model_from_json(app_json: dict):
@@ -67,4 +67,3 @@ class Transaction(BaseModel):
     audience: PaymentPrivacy
     device_used: DeviceModel = Field(validation_alias="app")
     comments: list[Comment] = Field(validation_alias=AliasPath("comments", "data"))
-    # mentions: list[Mention] = Field(validation_alias=AliasPath("mentions", "data"))

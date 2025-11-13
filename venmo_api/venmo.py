@@ -1,11 +1,9 @@
 from typing import Self
 
-from loguru import logger
-
 from venmo_api import ApiClient, AuthenticationApi, PaymentApi, UserApi
 
 
-class Client(object):
+class Client:
     @staticmethod
     def login(username: str, password: str, device_id: str | None = None) -> Self:
         """
@@ -59,9 +57,7 @@ class Client(object):
 
         self.user = UserApi(self.__api_client)
         self._profile = self.user.get_my_profile()
-        # logger.info(pformat(self.__profile))
         self.__balance = self.user.get_my_balance()
-        logger.info(f"{self.__balance=}")
         self.payment = PaymentApi(
             profile=self._profile, api_client=self.__api_client, balance=self.__balance
         )
@@ -78,7 +74,7 @@ class Client(object):
 
     def my_balance(self, force_update=False):
         """
-        Get your profile info. It can be cached from the prev time.
+        Get your balance info. It can be cached from the prev time.
         :return:
         """
         if force_update:
@@ -89,6 +85,13 @@ class Client(object):
     @property
     def access_token(self) -> str | None:
         return self.__api_client.access_token
+
+    # context manager dunder methods for `with` block logout using stored token
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.log_out_instance()
 
     def log_out_instance(self, token: str | None = None) -> bool:
         """

@@ -1,20 +1,19 @@
 import uuid
 
-from venmo_api.apis.api_client import ApiClient, ValidatedResponse
-from venmo_api.apis.api_util import confirm, warn
+from venmo_api.apis.api_client import ApiClient
+from venmo_api.apis.api_util import ValidatedResponse, confirm, warn
 from venmo_api.apis.exception import AuthenticationFailedError
 
 
-def random_device_id():
+def random_device_id() -> str:
     """
     Generate a random device id that can be used for logging in.
-    :return:
+    NOTE: As of late 2025, they seem to have tightened security around device-ids, so
+    that randomly generated ones aren't accepted.
     """
     return str(uuid.uuid4()).upper()
 
 
-# NOTE: it seems a device-id is required for payments now, so ApiClient should probably
-# own it
 class AuthenticationApi:
     TWO_FACTOR_ERROR_CODE = 81109
 
@@ -23,8 +22,12 @@ class AuthenticationApi:
     ):
         super().__init__()
 
-        self.__device_id = device_id or random_device_id()
-        self._api_client = api_client or ApiClient(device_id=self.__device_id)
+        self._device_id = device_id or random_device_id()
+        if not api_client:
+            self._api_client = ApiClient(device_id=self._device_id)
+        else:
+            self._api_client = api_client
+            self._api_client.update_device_id(self._device_id)
 
     def login_with_credentials_cli(self, username: str, password: str) -> str:
         """
@@ -38,7 +41,7 @@ class AuthenticationApi:
         warn(
             "IMPORTANT: Take a note of your device-id to avoid 2-factor-authentication for your next login."
         )
-        print(f"device-id: {self.__device_id}")
+        print(f"device-id: {self._device_id}")
         warn(
             "IMPORTANT: Your Access Token will NEVER expire, unless you logout manually (client.log_out(token)).\n"
             "Take a note of your token, so you don't have to login every time.\n"
@@ -54,7 +57,7 @@ class AuthenticationApi:
             access_token = response.body["access_token"]
 
         confirm("Successfully logged in. Note your token and device-id")
-        print(f"access_token: {access_token}\ndevice-id: {self.__device_id}")
+        print(f"access_token: {access_token}\ndevice-id: {self._device_id}")
 
         return access_token
 
@@ -108,9 +111,6 @@ class AuthenticationApi:
         :param password: <str>
         :return: <dict>
         """
-
-        resource_path = "/oauth/access_token"
-        header_params = {"device-id": self.__device_id, "Host": "api.venmo.com"}
         body = {
             "phone_email_or_username": username,
             "client_id": "1",
@@ -118,8 +118,7 @@ class AuthenticationApi:
         }
 
         return self._api_client.call_api(
-            resource_path=resource_path,
-            header_params=header_params,
+            resource_path="/oauth/access_token",
             body=body,
             method="POST",
             ok_error_codes=[self.TWO_FACTOR_ERROR_CODE],
@@ -131,15 +130,10 @@ class AuthenticationApi:
         :param otp_secret: <str> the otp-secret from response_headers.venmo-otp-secret
         :return: <dict>
         """
-
-        resource_path = "/account/two-factor/token"
-        header_params = {"device-id": self.__device_id, "venmo-otp-secret": otp_secret}
-        body = {"via": "sms"}
-
         response = self._api_client.call_api(
-            resource_path=resource_path,
-            header_params=header_params,
-            body=body,
+            resource_path="/account/two-factor/token",
+            header_params={"venmo-otp-secret": otp_secret},
+            body={"via": "sms"},
             method="POST",
         )
 
@@ -163,18 +157,11 @@ class AuthenticationApi:
         :return: <str> access_token
         """
 
-        resource_path = "/oauth/access_token"
-        header_params = {
-            "device-id": self.__device_id,
-            "venmo-otp": user_otp,
-            "venmo-otp-secret": otp_secret,
-        }
-        params = {"client_id": 1}
-
+        header_params = {"venmo-otp": user_otp, "venmo-otp-secret": otp_secret}
         response = self._api_client.call_api(
-            resource_path=resource_path,
+            resource_path="/oauth/access_token",
             header_params=header_params,
-            params=params,
+            params={"client_id": 1},
             method="POST",
         )
         return response.body["access_token"]
@@ -184,21 +171,20 @@ class AuthenticationApi:
         Add device_id or self.device_id (if no device_id passed) to the trusted devices on Venmo
         :return:
         """
-        device_id = device_id or self.__device_id
+        device_id = device_id or self._device_id
         header_params = {"device-id": device_id}
-        resource_path = "/users/devices"
 
         self._api_client.call_api(
-            resource_path=resource_path, header_params=header_params, method="POST"
+            resource_path="/users/devices", header_params=header_params, method="POST"
         )
 
         confirm("Successfully added your device id to the list of the trusted devices.")
         print(
-            f"Use the same device-id: {self.__device_id} next time to avoid 2-factor-auth process."
+            f"Use the same device-id: {self._device_id} next time to avoid 2-factor-auth process."
         )
 
     def get_device_id(self):
-        return self.__device_id
+        return self._device_id
 
     def set_access_token(self, access_token):
         self._api_client.update_access_token(access_token=access_token)

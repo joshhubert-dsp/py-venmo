@@ -1,15 +1,12 @@
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import (
-    AliasPath,
-    BaseModel,
-    Field,
-)
+from pydantic import AfterValidator, AliasPath, BaseModel, Field
 
-from venmo_api.models.us_dollars import UsDollars
 from venmo_api.models.user import PaymentPrivacy, User
+
+UsDollarsFloat = Annotated[float, AfterValidator(lambda v: round(v, 2))]
 
 
 # ---  ENUMS ---
@@ -45,7 +42,7 @@ class PaymentMethodType(StrEnum):
 class Fee(BaseModel):
     product_uri: str
     applied_to: str
-    base_fee_amount: UsDollars
+    base_fee_amount: UsDollarsFloat
     fee_percentage: float
     calculated_fee_amount_in_cents: int
     fee_token: str
@@ -64,7 +61,7 @@ class Payment(BaseModel):
     id: str
     status: PaymentStatus
     action: PaymentAction
-    amount: UsDollars | None
+    amount: UsDollarsFloat | None
     date_created: datetime
     audience: PaymentPrivacy | None = None
     note: str
@@ -94,7 +91,7 @@ class PaymentMethod(BaseModel):
 
 
 class TransferDestination(BaseModel):
-    id: str
+    id: int
     type: PaymentMethodType
     name: str
     last_four: str | None
@@ -105,7 +102,7 @@ class TransferDestination(BaseModel):
 
 class TransferPostResponse(BaseModel):
     id: str
-    amount: UsDollars
+    amount: UsDollarsFloat
     amount_cents: int
     amount_fee_cents: int
     amount_requested_cents: int

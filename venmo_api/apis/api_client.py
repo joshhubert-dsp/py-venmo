@@ -1,22 +1,18 @@
 import os
-from dataclasses import dataclass
 from json import JSONDecodeError
 from random import getrandbits
 
 import orjson
 import requests
-from requests.structures import CaseInsensitiveDict
 
 from venmo_api import PROJECT_ROOT
-from venmo_api.apis.exception import InvalidHttpMethodError, ResourceNotFoundError
+from venmo_api.apis.api_util import ValidatedResponse
+from venmo_api.apis.exception import (
+    HttpCodeError,
+    InvalidHttpMethodError,
+    ResourceNotFoundError,
+)
 from venmo_api.apis.logging_session import LoggingSession
-
-
-@dataclass(frozen=True, slots=True)
-class ValidatedResponse:
-    status_code: int
-    headers: CaseInsensitiveDict
-    body: list | dict
 
 
 class ApiClient:
@@ -90,7 +86,7 @@ class ApiClient:
         # Update the header with the required values
         header_params = header_params or {}
 
-        if body:
+        if body:  # POST or PUT
             header_params.update({"Content-Type": "application/json; charset=utf-8"})
 
         url = self.configuration["host"] + resource_path
@@ -99,20 +95,17 @@ class ApiClient:
         processed_response = self.request(
             method,
             url,
-            self.session,
             header_params=header_params,
             params=params,
             body=body,
             ok_error_codes=ok_error_codes,
         )
-        self.last_response = processed_response
         return processed_response
 
     def request(
         self,
         method,
         url,
-        session: requests.Session,
         header_params=None,
         params=None,
         body=None,
@@ -134,10 +127,9 @@ class ApiClient:
         if method not in ["POST", "PUT", "GET", "DELETE"]:
             raise InvalidHttpMethodError()
 
-        response = session.request(
+        response = self.session.request(
             method=method, url=url, headers=header_params, params=params, json=body
         )
-
         validated_response = self._validate_response(
             response, ok_error_codes=ok_error_codes
         )
@@ -167,9 +159,8 @@ class ApiClient:
         ):
             return built_response
 
-        elif response.status_code == 400 and body.get.get("error").get("code") == 283:
+        elif response.status_code == 400 and body.get("error").get("code") == 283:
             raise ResourceNotFoundError()
 
         else:
-            response.raise_for_status()
-            # raise HttpCodeError(response=response)
+            raise HttpCodeError(response=response)
