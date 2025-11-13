@@ -38,9 +38,9 @@ Good instructions [here](https://blog.sayan.page/mitm-proxy-on-ios/). Luckily yo
 have to do this once, the ID is fixed.
 
 ```bash
-brew install mitmproxy
+$ brew install mitmproxy
 # You'll route your WiFi through your desktop IP address, port 8080
-mitmweb --listen-host 0.0.0.0 --listen-port 8080 --web-port 8081
+$ mitmweb --listen-host 0.0.0.0 --listen-port 8080 --web-port 8081
 ```
 
 Disclaimer: This is an individual effort and is not PayPal/Venmo sponsored or maintained.

@@ -55,6 +55,10 @@ class EligibilityToken(BaseModel):
     eligible: bool
     fees: list[Fee]
     fee_disclaimer: str
+    ineligible_reason: str | None = Field(
+        None,
+        description="If your eligibility is denied, you'll get this cryptic string.",
+    )
 
 
 class Payment(BaseModel):
