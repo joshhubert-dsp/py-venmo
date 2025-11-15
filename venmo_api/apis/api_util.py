@@ -21,13 +21,17 @@ def deserialize(
     nested_response: list[str] | None = None,
 ) -> Any | Page[Any]:
     """Extract one or a list of Objects from the api_client structured response.
-    :param response: <dict>
-    :param data_type: if data of interest is a json object, should be a pydantic
-        BaseModel subclass. Otherwise can be a primitive class
-    :param nested_response: <list[str]> Optional. Loop through the body
-    :return: a single <Object> or a <Page> of objects (Objects can be User/Transaction/Payment/PaymentMethod)
-    """
 
+    Args:
+        response (ValidatedResponse): validated response.
+        data_type (type[BaseModel  |  Any]): if data of interest is a json object,
+            should be a pydantic BaseModel subclass. Otherwise can be a primitive class.
+        nested_response (list[str] | None, optional): _description_. Defaults to None.
+
+    Returns:
+        Any | Page[Any]: a single <Object> or a <Page> of objects (Objects can be
+            User/Transaction/Payment/PaymentMethod)
+    """
     body = response.body
     if not body:
         raise Exception("Can't get an empty response body.")
@@ -53,10 +57,14 @@ def deserialize(
 def __get_objs_from_json_list(
     json_list: list[Any], data_type: type[BaseModel | Any]
 ) -> Page[Any]:
-    """Process JSON for User/Transaction
-    :param json_list: <list> a list of objs
-    :param data_type: <class> User/Transaction/Payment/PaymentMethod
-    :return: <page>
+    """Process response JSON for a data list.
+
+    Args:
+        json_list (list[Any]): a list of objs
+        data_type (type[BaseModel  |  Any]): User/Transaction/Payment/PaymentMethod
+
+    Returns:
+        Page[Any]: list subclass container that can get its own next page.
     """
     result = Page()
     for elem in json_list:
@@ -82,8 +90,6 @@ class Colors(Enum):
 def warn(message):
     """
     print message in Red Color
-    :param message:
-    :return:
     """
     print(Colors.WARNING.value + message + Colors.ENDC.value)
 
@@ -91,7 +97,5 @@ def warn(message):
 def confirm(message):
     """
     print message in Blue Color
-    :param message:
-    :return:
     """
     print(Colors.OKBLUE.value + message + Colors.ENDC.value)

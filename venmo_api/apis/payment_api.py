@@ -27,6 +27,13 @@ class PaymentApi:
     def __init__(
         self, profile: User, api_client: ApiClient, balance: float | None = None
     ):
+        """
+        Args:
+            profile (User): User object for the current user, fetched at login.
+            api_client (ApiClient): client to use for requests.
+            balance (float | None, optional): User initial Venmo balance, if desired. Defaults
+                to None.
+        """
         super().__init__()
         self._profile = profile
         self._balance = balance
@@ -39,27 +46,39 @@ class PaymentApi:
         }
 
     def get_charge_payments(self, limit=100000) -> Page[Payment]:
-        """
-        Get a list of charge ongoing payments (pending request money)
-        :param limit:
-        :return:
+        """Get a list of charge ongoing payments (pending request money)
+
+        Args:
+            limit (int, optional): Maximum number of payments to fetch. Defaults to 100000.
+
+        Returns:
+            Page[Payment]
         """
         return self._get_payments(action="charge", limit=limit)
 
     def get_pay_payments(self, limit=100000) -> Page[Payment]:
-        """
-        Get a list of pay ongoing payments (pending requested money from your profile)
-        :param limit:
-        :return:
+        """Get a list of pay ongoing payments (pending requested money from your profile)
+
+        Args:
+            limit (int, optional): Maximum number of payments to fetch. Defaults to 100000.
+
+        Returns:
+            Page[Payment]
         """
         return self._get_payments(action="pay", limit=limit)
 
     def remind_payment(self, payment_id: str) -> bool:
-        """
-        Send a reminder for payment/payment_id
-        :param payment: either payment object or payment_id must be be provided
-        :param payment_id:
-        :return: True or raises AlreadyRemindedPaymentError
+        """Send a reminder for a payment
+
+        Args:
+            payment_id (str): the uuid for the payment, as returned by Payment.id.
+
+        Raises:
+            NoPendingPaymentToUpdateError
+            AlreadyRemindedPaymentError
+
+        Returns:
+            bool: True or raises AlreadyRemindedPaymentError
         """
         action = "remind"
         response = self._update_payment(action=action, payment_id=payment_id)
@@ -75,11 +94,17 @@ class PaymentApi:
         return True
 
     def cancel_payment(self, payment_id: str) -> bool:
-        """
-        Cancel the payment_id provided. Only applicable to payments you have access to (requested payments)
-        :param payment:
-        :param payment_id:
-        :return: True or raises NoPendingPaymentToCancelError
+        """Cancel the payment_id provided. Only applicable to payments you have access
+        to (requested payments).
+
+        Args:
+            payment_id (str): the uuid for the payment
+
+        Raises:
+            NoPendingPaymentToUpdateError
+
+        Returns:
+            bool:  True or raises NoPendingPaymentToCancelError
         """
         action = "cancel"
         response = self._update_payment(action=action, payment_id=payment_id)
@@ -90,7 +115,6 @@ class PaymentApi:
     def get_payment_methods(self) -> Page[PaymentMethod]:
         """
         Get a list of available payment_methods
-        :return:
         """
         response = self._api_client.call_api(
             resource_path="/payment-methods", method="GET"
@@ -105,18 +129,20 @@ class PaymentApi:
         funding_source_id: str = None,
         privacy_setting: PaymentPrivacy = PaymentPrivacy.PRIVATE,
     ) -> Payment:
-        """
-        send [amount] money with [note] to the ([target_user_id] or [target_user]) from the [funding_source_id]
+        """send [amount] money with [note] to the ([target_user_id] from the [funding_source_id]
         If no [funding_source_id] is provided, it will find the default source_id and uses that.
-        :param amount: <float>
-        :param note: <str>
-        :param funding_source_id: <str> Your payment_method id for this payment
-        :param privacy_setting: <PaymentPrivacy> PRIVATE/FRIENDS/PUBLIC (enum)
-        :param target_user_id: <str>
-        :param target_user: <User>
-        :return: <bool> Either the transaction was successful or an exception will rise.
-        """
 
+        Args:
+            amount (float): Amount in US dollars, gets rounded to 2 decimals internally.
+            note (str): descriptive note required with payment.
+            target_user_id (str): uuid of recipient user, as returned by User.id.
+            funding_source_id (str, optional): uuid of funding source. Defaults to None.
+            privacy_setting (PaymentPrivacy, optional): PRIVATE/FRIENDS/PUBLIC .
+                Defaults to PaymentPrivacy.PRIVATE.
+
+        Returns:
+            Payment: Either the transaction was successful or an exception will rise.
+        """
         return self._send_or_request_money(
             amount=amount,
             note=note,
@@ -133,14 +159,17 @@ class PaymentApi:
         target_user_id: str,
         privacy_setting: PaymentPrivacy = PaymentPrivacy.PRIVATE,
     ) -> Payment:
-        """
-        Request [amount] money with [note] from the ([target_user_id] or [target_user])
-        :param amount: <float> amount of money to be requested
-        :param note: <str> message/note of the transaction
-        :param privacy_setting: <PaymentPrivacy> PRIVATE/FRIENDS/PUBLIC (enum)
-        :param target_user_id: <str> the user id of the person you are asking the money from
-        :param target_user: <User> The user object or user_id is required
-        :return: <bool> Either the transaction was successful or an exception will rise.
+        """Request [amount] money with [note] from  [target_user_id].
+
+        Args:
+            amount (float): Amount in US dollars, gets rounded to 2 decimals internally.
+            note (str): descriptive note required with payment.
+            target_user_id (str): uuid of recipient user, as returned by User.id.
+            privacy_setting (PaymentPrivacy, optional): PRIVATE/FRIENDS/PUBLIC .
+                Defaults to PaymentPrivacy.PRIVATE.
+
+        Returns:
+            Payment: Either the transaction was successful or an exception will rise.
         """
         return self._send_or_request_money(
             amount=amount,
@@ -154,9 +183,16 @@ class PaymentApi:
     def get_transfer_destinations(
         self, trans_type: Literal["standard", "instant"]
     ) -> Page[TransferDestination]:
-        """
-        Get a list of available transfer destination options for the given type
-        :return:
+        """Get a list of available transfer destination options from your Venmo balance
+        for the given type.
+
+        Args:
+            trans_type (Literal[&quot;standard&quot;, &quot;instant&quot;]): 'standard' is
+                the free transfer that takes longer, 'instant' is the quicker transfer
+                that charges a fee.
+
+        Returns:
+            Page[TransferDestination]: list of eligible destinations.
         """
         response = self._api_client.call_api(
             resource_path="/transfers/options", method="GET"
@@ -171,6 +207,24 @@ class PaymentApi:
         amount: float | None = None,
         trans_type: Literal["standard", "instant"] = "standard",
     ) -> TransferPostResponse:
+        """Initiate a transfer from your Venmo balance.
+
+        Args:
+            destination_id (str): uuid of transfer destination, as returned by
+                TransferDestination.id.
+            amount (float | None, optional): Amount in US dollars, gets rounded to 2
+                decimals internally. Defaults to None, in which case the entire Venmo
+                balance determined at initialization is used.
+            trans_type (Literal[&quot;standard&quot;, &quot;instant&quot;], optional):
+                'standard' is the free transfer that takes longer, 'instant' is the
+                quicker transfer that charges a fee. Defaults to "standard".
+
+        Raises:
+            ValueError
+
+        Returns:
+            TransferPostResponse: object signifying successful transfer with details.
+        """
         if amount is None and self._balance is not None:
             amount = self._balance
         else:
@@ -192,7 +246,6 @@ class PaymentApi:
     def get_default_payment_method(self) -> PaymentMethod:
         """
         Search in all payment_methods and find the one that has payment_role of Default
-        :return:
         """
         payment_methods = self.get_payment_methods()
 
@@ -216,18 +269,24 @@ class PaymentApi:
         country_code: str = "1",
         target_type: str = "user_id",
     ) -> EligibilityToken:
-        """
-        Generate eligibility token which is needed in payment requests
-        :param amount: <float> amount of money to be requested
-        :param note: <str> message/note of the transaction
-        :param target_id: <int> the user id of the person you are sending money to
-        :param funding_source_id: <str> Your payment_method id for this payment
-        :param action: <str> action that eligibility token is used for
-        :param country_code: <str> country code, not sure what this is for
-        :param target_type: <str> set by default to user_id, but there are probably other target types
+        """Generate eligibility token which is needed in payment requests
+
+        Args:
+            amount (float): Amount in US dollars, gets rounded to 2 decimals internally.
+            note (str): descriptive note required with payment.
+            target_id (str): uuid of recipient user, as returned by User.id.
+            action (str, optional): "pay" is currently the only valid argument observed.
+                Defaults to "pay".
+            country_code (str, optional): "1" is currently the only valid argument
+                observed. Defaults to "1", presumably for USA.
+            target_type (str, optional): "user_id" is currently the only valid argument
+                observed. Defaults to "user_id".
+
+        Returns:
+            EligibilityToken: ephemeral token that must be passed in payment payload.
         """
         body = {
-            "funding_source_id": "",
+            "funding_source_id": "",  # api leaves this blank currently
             "action": action,
             "country_code": country_code,
             "target_type": target_type,
@@ -252,11 +311,10 @@ class PaymentApi:
 
     def _get_payments(self, action: PaymentAction, limit: int) -> Page[Payment]:
         """
-        Get a list of ongoing payments with the given action
-        :return:
+        Helper method for getting a list of ongoing payments with the given action
         """
         parameters = {"action": action, "actor": self._profile.id, "limit": limit}
-        # other params `status: pending,held`
+        # TODO other params `status: pending,held`
         response = self._api_client.call_api(
             resource_path="/payments",
             params=parameters,
@@ -273,17 +331,9 @@ class PaymentApi:
         target_user_id: str,
         privacy_setting: PaymentPrivacy = PaymentPrivacy.PRIVATE,
         eligibility_token: str | None = None,
-    ) -> Payment | None:
+    ) -> Payment:
         """
-        Generic method for sending and requesting money
-        :param amount:
-        :param note:
-        :param is_send_money:
-        :param funding_source_id:
-        :param privacy_setting:
-        :param target_user_id:
-        :param eligibility_token:
-        :return:
+        Helper method for sending and requesting money.
         """
 
         amount = abs(amount)

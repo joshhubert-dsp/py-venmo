@@ -40,6 +40,9 @@ class PaymentMethodType(StrEnum):
 
 
 class Fee(BaseModel):
+    """bundled with EligilityToken and PaymentMethod responses. I don't pay fees so IDK
+    really what's up there."""
+
     product_uri: str
     applied_to: str
     base_fee_amount: UsDollarsFloat
@@ -62,6 +65,8 @@ class EligibilityToken(BaseModel):
 
 
 class Payment(BaseModel):
+    """object returned by a successful payment/request"""
+
     id: str
     status: PaymentStatus
     action: PaymentAction
@@ -95,6 +100,8 @@ class PaymentMethod(BaseModel):
 
 
 class TransferDestination(BaseModel):
+    """variant of PaymentMethod specifically for transfers to/from your Venmo balance"""
+
     id: int
     type: PaymentMethodType
     name: str
@@ -105,6 +112,8 @@ class TransferDestination(BaseModel):
 
 
 class TransferPostResponse(BaseModel):
+    """object returned by a successful transfer"""
+
     id: str
     amount: UsDollarsFloat
     amount_cents: int

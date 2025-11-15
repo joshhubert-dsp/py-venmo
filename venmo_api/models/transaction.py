@@ -58,6 +58,8 @@ class Comment(BaseModel):
 
 
 class Transaction(BaseModel):
+    """wrapper around Payment returned when you fetch your "stories" feeds"""
+
     type: TransactionType
     id: str
     note: str

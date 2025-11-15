@@ -22,8 +22,11 @@ class ApiClient:
 
     def __init__(self, access_token: str | None = None, device_id: str | None = None):
         """
-        :param access_token: <str> access token you received for your account, not
-            including the 'Bearer ' prefix, that's added to the request header.
+        Args:
+            access_token (str | None, optional): access token you received for your
+                account, not including the 'Bearer ' prefix (that's added to the request
+                header).. Defaults to None.
+            device_id (str | None, optional): Must be a real device ID. Defaults to None.
         """
 
         super().__init__()
@@ -66,74 +69,42 @@ class ApiClient:
         self,
         resource_path: str,
         method: str,
-        header_params: dict = None,
+        headers: dict = None,
         params: dict = None,
         body: dict = None,
         ok_error_codes: list[int] = None,
     ) -> ValidatedResponse:
-        """
-        Calls API on the provided path
+        """Calls API on the provided path
 
-        :param resource_path: <str> Specific Venmo API path
-        :param method: <str> HTTP request method
-        :param header_params: <dict> request headers
-        :param body: <dict> request body will be send as JSON
-        :param ok_error_codes: <list[int]> A list of integer error codes that you don't want an exception for.
+        Args:
+            resource_path (str): Specific Venmo API path endpoint.
+            method (str): HTTP request method
+            headers (dict, optional): request headers. Defaults to None, in which
+                case the default ones in `default_headers.json` are used.
+            query_params (dict, optional): endpoint query parameters. Defaults to None.
+            body (dict, optional): JSON payload to send if request is POST/PUT. Defaults
+                to None.
+            ok_error_codes (list[int], optional): Expected integer error codes that will be
+                handled by calling code and which shouldn't raise. Defaults to None.
 
-        :return: response: <dict> {'status_code': <int>, 'headers': <dict>, 'body': <dict>}
+        Returns:
+            ValidatedResponse
         """
 
         # Update the header with the required values
-        header_params = header_params or {}
+        headers = headers or {}
 
         if body:  # POST or PUT
-            header_params.update({"Content-Type": "application/json; charset=utf-8"})
-
+            headers.update({"Content-Type": "application/json; charset=utf-8"})
         url = self.configuration["host"] + resource_path
-
-        # perform request and return response
-        processed_response = self.request(
-            method,
-            url,
-            header_params=header_params,
-            params=params,
-            body=body,
-            ok_error_codes=ok_error_codes,
-        )
-        return processed_response
-
-    def request(
-        self,
-        method,
-        url,
-        header_params=None,
-        params=None,
-        body=None,
-        ok_error_codes: list[int] = None,
-    ) -> ValidatedResponse:
-        """
-        Make a request with the provided information using a requests.session
-        :param method:
-        :param url:
-        :param session:
-        :param header_params:
-        :param params:
-        :param body:
-        :param ok_error_codes: <list[int]> A list of integer error codes that you don't want an exception for.
-
-        :return:
-        """
 
         if method not in ["POST", "PUT", "GET", "DELETE"]:
             raise InvalidHttpMethodError()
 
         response = self.session.request(
-            method=method, url=url, headers=header_params, params=params, json=body
+            method=method, url=url, headers=headers, params=params, json=body
         )
-        validated_response = self._validate_response(
-            response, ok_error_codes=ok_error_codes
-        )
-
+        validated_response = self._validate_response(response, ok_error_codes)
         return validated_response
 
     @staticmethod
@@ -142,9 +113,6 @@ class ApiClient:
     ) -> ValidatedResponse:
         """
         Validate and build a new validated response.
-        :param response:
-        :param ok_error_codes: <list[int]> A list of integer error codes that you don't want an exception for.
-        :return:
         """
         headers = response.headers
         try:

@@ -30,13 +30,15 @@ class AuthenticationApi:
             self._api_client.update_device_id(self._device_id)
 
     def login_with_credentials_cli(self, username: str, password: str) -> str:
-        """
-        Pass your username and password to get an access_token for using the API.
-        :param username: <str> Phone, email or username
-        :param password: <str> Your account password to login
-        :return: <str>
-        """
+        """Pass your username and password to get an access_token for using the API.
 
+        Args:
+            username (str): Phone, email or username
+            password (str): Your account password to login
+
+        Returns:
+            str: access token generated for this session
+        """
         # Give warnings to the user about device-id and token expiration
         warn(
             "IMPORTANT: Take a note of your device-id to avoid 2-factor-authentication for your next login."
@@ -46,7 +48,6 @@ class AuthenticationApi:
             "IMPORTANT: Your Access Token will NEVER expire, unless you logout manually (client.log_out(token)).\n"
             "Take a note of your token, so you don't have to login every time.\n"
         )
-
         response = self.authenticate_using_username_password(username, password)
 
         # if two-factor error
@@ -61,29 +62,61 @@ class AuthenticationApi:
 
         return access_token
 
+    def authenticate_using_username_password(
+        self, username: str, password: str
+    ) -> ValidatedResponse:
+        """Authenticate with username and password. Raises exception if either are incorrect.
+        Check returned response:
+            - if it has an error (response.body.error), 2-factor is needed
+            - if no error, (response.body.access_token) gives you the access_token
+
+        Args:
+            username (str): Phone, email or username
+            password (str): Your account password to login
+
+        Returns:
+            ValidatedResponse: validated response containing access token
+        """
+        body = {
+            "phone_email_or_username": username,
+            "client_id": "1",
+            "password": password,
+        }
+
+        return self._api_client.call_api(
+            resource_path="/oauth/access_token",
+            body=body,
+            method="POST",
+            ok_error_codes=[self.TWO_FACTOR_ERROR_CODE],
+        )
+
     @staticmethod
     def log_out(access_token: str) -> bool:
-        """
-        Revoke your access_token
-        :param access_token: <str>
-        :return:
-        """
+        """Revoke your access_token
 
-        resource_path = "/oauth/access_token"
+        Args:
+            access_token (str): token for session you want to log out of.
+
+        Returns:
+            bool: True or raises exception.
+        """
         api_client = ApiClient(access_token=access_token)
-
-        api_client.call_api(resource_path=resource_path, method="DELETE")
-
+        api_client.call_api(resource_path="/oauth/access_token", method="DELETE")
         confirm("Successfully logged out.")
         return True
 
     def _two_factor_process_cli(self, response: ValidatedResponse) -> str:
-        """
-        Get response from authenticate_with_username_password for a CLI two-factor process
-        :param response:
-        :return: <str> access_token
-        """
+        """Get response from authenticate_with_username_password for a CLI two-factor process
 
+        Args:
+            response (ValidatedResponse): validated response
+
+        Raises:
+            AuthenticationFailedError
+
+        Returns:
+            str: access token generated for this session
+        """
         otp_secret = response.headers.get("venmo-otp-secret")
         if not otp_secret:
             raise AuthenticationFailedError(
@@ -99,36 +132,17 @@ class AuthenticationApi:
 
         return access_token
 
-    def authenticate_using_username_password(
-        self, username: str, password: str
-    ) -> ValidatedResponse:
-        """
-        Authenticate with username and password. Raises exception if either be incorrect.
-        Check returned response:
-            if have an error (response.body.error), 2-factor is needed
-            if no error, (response.body.access_token) gives you the access_token
-        :param username: <str>
-        :param password: <str>
-        :return: <dict>
-        """
-        body = {
-            "phone_email_or_username": username,
-            "client_id": "1",
-            "password": password,
-        }
-
-        return self._api_client.call_api(
-            resource_path="/oauth/access_token",
-            body=body,
-            method="POST",
-            ok_error_codes=[self.TWO_FACTOR_ERROR_CODE],
-        )
-
     def send_text_otp(self, otp_secret: str) -> ValidatedResponse:
-        """
-        Send one-time-password to user phone-number
-        :param otp_secret: <str> the otp-secret from response_headers.venmo-otp-secret
-        :return: <dict>
+        """Send one-time-password to user phone-number
+
+        Args:
+            otp_secret (str): the otp-secret from response_headers.venmo-otp-secret
+
+        Raises:
+            AuthenticationFailedError
+
+        Returns:
+            ValidatedResponse: validated response
         """
         response = self._api_client.call_api(
             resource_path="/account/two-factor/token",
@@ -150,13 +164,15 @@ class AuthenticationApi:
         return response
 
     def authenticate_using_otp(self, user_otp: str, otp_secret: str) -> str:
-        """
-        Login using one-time-password, for 2-factor process
-        :param user_otp: <str> otp user received on their phone
-        :param otp_secret: <str> otp_secret obtained from 2-factor process
-        :return: <str> access_token
-        """
+        """Login using one-time-password, for 2-factor process
 
+        Args:
+            user_otp (str): otp user received on their phone
+            otp_secret (str): otp_secret obtained from 2-factor process
+
+        Returns:
+            str: _description_
+        """
         header_params = {"venmo-otp": user_otp, "venmo-otp-secret": otp_secret}
         response = self._api_client.call_api(
             resource_path="/oauth/access_token",
@@ -166,10 +182,9 @@ class AuthenticationApi:
         )
         return response.body["access_token"]
 
-    def trust_this_device(self, device_id=None):
+    def trust_this_device(self, device_id: str | None = None):
         """
         Add device_id or self.device_id (if no device_id passed) to the trusted devices on Venmo
-        :return:
         """
         device_id = device_id or self._device_id
         header_params = {"device-id": device_id}

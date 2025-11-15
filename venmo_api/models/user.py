@@ -15,6 +15,7 @@ class FriendStatus(StrEnum):
     NOT_FRIEND = auto()
 
 
+# TODO verify stuff that isn't personal
 class IdentityType(StrEnum):
     PERSONAL = auto()
     BUSINESS = auto()

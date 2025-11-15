@@ -13,9 +13,14 @@ class UserApi:
         self._balance = None
 
     def get_my_profile(self, force_update=False) -> User:
-        """
-        Get my profile info and return as a <User>
-        :return my_profile: <User>
+        """Get your profile info and return as a User.
+
+        Args:
+            force_update (bool, optional): Whether to require fetching updated data from
+                API. Defaults to False.
+
+        Returns:
+            User: Your profile.
         """
         if self._profile and not force_update:
             return self._profile
@@ -25,9 +30,14 @@ class UserApi:
         return self._profile
 
     def get_my_balance(self, force_update=False) -> float:
-        """
-        Get my current balance info and return as a float
-        :return my_profile: <User>
+        """Get your current balance info and return as a float.
+
+        Args:
+            force_update (bool, optional): Whether to require fetching updated data from
+                API. Defaults to False.
+
+        Returns:
+            float: Your balance
         """
         if self._balance and not force_update:
             return self._balance
@@ -45,13 +55,16 @@ class UserApi:
         limit: int = 50,
         username: bool = False,
     ) -> Page[User]:
-        """
-        search for [query] in users
-        :param query:
-        :param offset:
-        :param limit:
-        :param username: default: False; Pass True if search is by username
-        :return users_list: <list> A list of <User> objects or empty
+        """search for [query] in users
+
+        Args:
+            query (str): user search terms.
+            offset (int, optional): Page offset. Defaults to 0.
+            limit (int, optional): Maximum number of entries to return. Defaults to 50.
+            username (bool, optional): Pass True if search is by username. Defaults to False.
+
+        Returns:
+            Page[User]: A list of User objects or empty
         """
 
         params = {"query": query, "limit": limit, "offset": offset}
@@ -68,22 +81,31 @@ class UserApi:
             current_offset=offset,
         )
 
-    def get_user(self, user_id: str) -> User:
-        """
-        Get the user profile with [user_id]
-        :param user_id: <str>, example: '2859950549165568970'
-        :return user: <User> <NoneType>
+    def get_user(self, user_id: str) -> User | None:
+        """Get the user profile with [user_id]
+
+        Args:
+            user_id (str): uuid for user, as returned by User.id.
+
+        Returns:
+            User | None: the corresponding User, if any.
         """
         response = self.__api_client.call_api(
             resource_path=f"/users/{user_id}", method="GET"
         )
-        return deserialize(response=response, data_type=User)
+        try:
+            return deserialize(response=response, data_type=User)
+        except Exception:
+            return None
 
     def get_user_by_username(self, username: str) -> User | None:
-        """
-        Get the user profile with [username]
-        :param username:
-        :return user: <User> <NoneType>
+        """Search for the user profile with [username]
+
+        Args:
+            username (str): username of User.
+
+        Returns:
+            User | None: The corresponding User, if any.
         """
         users = self.search_for_users(query=username, username=True)
         for user in users:
@@ -99,9 +121,15 @@ class UserApi:
         offset: int = 0,
         limit: int = 3337,
     ) -> Page[User]:
-        """
-        Get ([user_id]'s or [user]'s) friends list as a list of <User>s
-        :return users_list: <list> A list of <User> objects or empty
+        """Get [user_id]'s friends list as a list of Users
+
+        Args:
+            user_id (str): uuid for user, as returned by User.id.
+            offset (int, optional): Page offset. Defaults to 0.
+            limit (int, optional): Maximum number of entries to return. Defaults to 3337.
+
+        Returns:
+            Page[User]: A list of User objects or empty if no friends :(
         """
         params = {"limit": limit, "offset": offset}
         response = self.__api_client.call_api(
@@ -119,17 +147,25 @@ class UserApi:
         self,
         user_id: str,
         social_only: bool = False,
-        public_only: bool = False,
+        public_only: bool = True,
         limit: int = 50,
         before_id: str | None = None,
     ) -> Page[Transaction]:
-        """
-        Get ([user_id]'s or [user]'s) transactions visible to yourself as a list of <Transaction>s
-        :param user_id:
-        :param user:
-        :param limit:
-        :param before_id:
-        :return:
+        """Get [user_id]'s transactions visible to you as a list of Transactions
+
+        Args:
+            user_id (str): uuid for user, as returned by User.id.
+            social_only (bool, optional): I think this means show only transactions
+                between personal accounts, not business/charity ones, but haven't
+                verified. Defaults to False.
+            public_only (bool, optional): I think this means show only transactions
+                the user has made public, but haven't verified. Defaults to True.
+            limit (int, optional): Maximum number of entries to return. Defaults to 50.
+            before_id (str | None, optional): Index for determining the page returned.
+                Defaults to None.
+
+        Returns:
+            Page[Transaction]: A list of Transaction objects.
         """
         response = self._get_transactions(
             user_id, social_only, public_only, limit, before_id
@@ -147,17 +183,24 @@ class UserApi:
     def get_friends_transactions(
         self,
         social_only: bool = False,
-        public_only: bool = False,
+        public_only: bool = True,
         limit: int = 50,
         before_id: str | None = None,
-    ) -> Page[Transaction] | None:
-        """
-        Get ([user_id]'s or [user]'s) transactions visible to yourself as a list of <Transaction>s
-        :param user_id:
-        :param user:
-        :param limit:
-        :param before_id:
-        :return:
+    ) -> Page[Transaction]:
+        """Get your friends' transactions visible to you as a list of Transactions
+
+        Args:
+            social_only (bool, optional): I think this means show only transactions
+                between personal accounts, not business/charity ones, but haven't
+                verified. Defaults to False.
+            public_only (bool, optional): I think this means show only transactions
+                the user has made public, but haven't verified. Defaults to True.
+            limit (int, optional): Maximum number of entries to return. Defaults to 50.
+            before_id (str | None, optional): Index for determining the page returned.
+                Defaults to None.
+
+        Returns:
+            Page[Transaction]: A list of Transaction objects.
         """
         response = self._get_transactions(
             "friends", social_only, public_only, limit, before_id
@@ -176,20 +219,27 @@ class UserApi:
         user_id_one: str,
         user_id_two: str,
         social_only: bool = False,
-        public_only: bool = False,
+        public_only: bool = True,
         limit: int = 50,
         before_id: str | None = None,
     ) -> Page[Transaction] | None:
-        """
-        Get the transactions between two users. Note that user_one must be the owner of the access token.
-        Otherwise it raises an unauthorized error.
-        :param user_id_one:
-        :param user_id_two:
-        :param user_one:
-        :param user_two:
-        :param limit:
-        :param before_id:
-        :return:
+        """Get the transactions between two users. Note that user_one_id must be the owner
+        of the access token. Otherwise it raises an unauthorized error.
+
+        Args:
+            user_id_one (str): Your user uuid.
+            user_id_two (str): uuid of the other person
+            social_only (bool, optional): I think this means show only transactions
+                between personal accounts, not business/charity ones, but haven't
+                verified. Defaults to False.
+            public_only (bool, optional): I think this means show only transactions
+                the user has made public, but haven't verified. Defaults to True.
+            limit (int, optional): Maximum number of entries to return. Defaults to 50.
+            before_id (str | None, optional): Index for determining the page returned.
+                Defaults to None.
+
+        Returns:
+            Page[Transaction]: A list of Transaction objects.
         """
         response = self._get_transactions(
             f"{user_id_one}/target-or-actor/{user_id_two}",

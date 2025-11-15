@@ -6,7 +6,7 @@ payments) no longer worked. I took the liberty of fixing payment functionality, 
 additional endpoints, and refactoring it almost beyond recognition. To be specific, this
 uses the mobile Venmo app API, the browser version is quite different.
 
-## MAJOR UPDATES
+## FORK UPDATES
 
 -   Payments work again! Credit to [Joseph Charles](https://github.com/j027/Venmo) for
     adding eligibility token support and laying the groundwork.
@@ -26,6 +26,12 @@ uses the mobile Venmo app API, the browser version is quite different.
     you out of your account with a variable cooldown time.
 -   Request headers now mirror the actual app's as closely as possible. The default
     headers live in `default_headers.json`.
+-   All code docstrings have been updated with changes.
+
+## TODO
+
+-   Update Sphinx docs.
+-   Get the original creator's blessing to submit package to PyPi with a new name.
 
 ## Device ID Rigmarole
 
@@ -42,6 +48,8 @@ $ brew install mitmproxy
 # You'll route your WiFi through your desktop IP address, port 8080
 $ mitmweb --listen-host 0.0.0.0 --listen-port 8080 --web-port 8081
 ```
+
+# ORIGINAL README BELOW
 
 Disclaimer: This is an individual effort and is not PayPal/Venmo sponsored or maintained.
 
