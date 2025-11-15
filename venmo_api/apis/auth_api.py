@@ -1,33 +1,22 @@
-import uuid
-
 from venmo_api.apis.api_client import ApiClient
 from venmo_api.apis.api_util import ValidatedResponse, confirm, warn
 from venmo_api.apis.exception import AuthenticationFailedError
 
-
-def random_device_id() -> str:
-    """
-    Generate a random device id that can be used for logging in.
-    NOTE: As of late 2025, they seem to have tightened security around device-ids, so
-    that randomly generated ones aren't accepted.
-    """
-    return str(uuid.uuid4()).upper()
+# NOTE: ApiClient owns device-id now
 
 
 class AuthenticationApi:
+    """Auth API for logging in/out of your account.
+
+    Args:
+        api_client (ApiClient): Pre-initialized ApiClient that holds device-id. This
+            instance will be logged in with the access token returned.
+    """
+
     TWO_FACTOR_ERROR_CODE = 81109
 
-    def __init__(
-        self, api_client: ApiClient | None = None, device_id: str | None = None
-    ):
-        super().__init__()
-
-        self._device_id = device_id or random_device_id()
-        if not api_client:
-            self._api_client = ApiClient(device_id=self._device_id)
-        else:
-            self._api_client = api_client
-            self._api_client.update_device_id(self._device_id)
+    def __init__(self, api_client: ApiClient):
+        self._api_client = api_client
 
     def login_with_credentials_cli(self, username: str, password: str) -> str:
         """Pass your username and password to get an access_token for using the API.
@@ -43,7 +32,7 @@ class AuthenticationApi:
         warn(
             "IMPORTANT: Take a note of your device-id to avoid 2-factor-authentication for your next login."
         )
-        print(f"device-id: {self._device_id}")
+        print(f"device-id: {self.get_device_id()}")
         warn(
             "IMPORTANT: Your Access Token will NEVER expire, unless you logout manually (client.log_out(token)).\n"
             "Take a note of your token, so you don't have to login every time.\n"
@@ -58,7 +47,8 @@ class AuthenticationApi:
             access_token = response.body["access_token"]
 
         confirm("Successfully logged in. Note your token and device-id")
-        print(f"access_token: {access_token}\ndevice-id: {self._device_id}")
+        print(f"access_token: {access_token}\ndevice-id: {self.get_device_id()}")
+        self._api_client.update_access_token(access_token)
 
         return access_token
 
@@ -126,9 +116,8 @@ class AuthenticationApi:
 
         self.send_text_otp(otp_secret=otp_secret)
         user_otp = self._ask_user_for_otp_password()
-
         access_token = self.authenticate_using_otp(user_otp, otp_secret)
-        self._api_client.update_access_token(access_token=access_token)
+        self._api_client.update_access_token(access_token)
 
         return access_token
 
@@ -182,27 +171,18 @@ class AuthenticationApi:
         )
         return response.body["access_token"]
 
-    def trust_this_device(self, device_id: str | None = None):
+    def trust_this_device(self):
         """
-        Add device_id or self.device_id (if no device_id passed) to the trusted devices on Venmo
+        Add current device_id to the trusted devices on Venmo
         """
-        device_id = device_id or self._device_id
-        header_params = {"device-id": device_id}
-
-        self._api_client.call_api(
-            resource_path="/users/devices", header_params=header_params, method="POST"
-        )
-
+        self._api_client.call_api(resource_path="/users/devices", method="POST")
         confirm("Successfully added your device id to the list of the trusted devices.")
         print(
-            f"Use the same device-id: {self._device_id} next time to avoid 2-factor-auth process."
+            f"Use the same device-id: {self.get_device_id()} next time to avoid 2-factor-auth process."
         )
 
     def get_device_id(self):
-        return self._device_id
-
-    def set_access_token(self, access_token):
-        self._api_client.update_access_token(access_token=access_token)
+        return self._api_client.device_id
 
     @staticmethod
     def _ask_user_for_otp_password():

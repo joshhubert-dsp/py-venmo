@@ -114,7 +114,7 @@ class TransferDestination(BaseModel):
 class TransferPostResponse(BaseModel):
     """object returned by a successful transfer"""
 
-    id: str
+    id: int
     amount: UsDollarsFloat
     amount_cents: int
     amount_fee_cents: int

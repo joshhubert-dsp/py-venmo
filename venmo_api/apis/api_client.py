@@ -1,4 +1,5 @@
 import os
+import uuid
 from json import JSONDecodeError
 from random import getrandbits
 
@@ -15,22 +16,29 @@ from venmo_api.apis.exception import (
 from venmo_api.apis.logging_session import LoggingSession
 
 
+def random_device_id() -> str:
+    """
+    Generate a random device id that can be used for logging in.
+    NOTE: As of late 2025, they seem to have tightened security around device-ids, so
+    that randomly generated ones aren't accepted.
+    """
+    return str(uuid.uuid4()).upper()
+
+
 class ApiClient:
     """
     Generic API Client for the Venmo API
+
+    Args:
+        access_token (str | None, optional): access token you received for your
+            account, not including the 'Bearer ' prefix (that's added to the request
+            header). Defaults to None. None is only valid on initial authorization.
+        device_id (str | None, optional): unique device ID. Defaults to None, in
+            which case a random one is generated. FYI I don't think random ids work
+            anymore.
     """
 
     def __init__(self, access_token: str | None = None, device_id: str | None = None):
-        """
-        Args:
-            access_token (str | None, optional): access token you received for your
-                account, not including the 'Bearer ' prefix (that's added to the request
-                header).. Defaults to None.
-            device_id (str | None, optional): Must be a real device ID. Defaults to None.
-        """
-
-        super().__init__()
-
         self.default_headers = orjson.loads(
             (PROJECT_ROOT / "default_headers.json").read_bytes()
         )
@@ -43,9 +51,11 @@ class ApiClient:
         self.access_token = access_token
         if access_token:
             self.update_access_token(access_token)
-        self.device_id = device_id
-        if device_id:
-            self.update_device_id(device_id)
+
+        if not device_id:
+            device_id = random_device_id()
+
+        self.update_device_id(device_id)
 
         self.update_session_id()
         self.configuration = {"host": "https://api.venmo.com/v1"}

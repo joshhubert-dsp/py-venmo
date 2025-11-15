@@ -6,6 +6,12 @@ from venmo_api.models.user import User
 
 
 class UserApi:
+    """API for querying users and transactions.
+
+    Args:
+        api_client (ApiClient): Logged in client instance to use for requests.
+    """
+
     def __init__(self, api_client: ApiClient):
         super().__init__()
         self.__api_client = api_client

@@ -12,7 +12,7 @@ from venmo_api.models.page import Page
 class ValidatedResponse:
     status_code: int
     headers: CaseInsensitiveDict
-    body: list | dict
+    body: dict
 
 
 def deserialize(

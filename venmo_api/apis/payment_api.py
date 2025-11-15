@@ -24,16 +24,19 @@ from venmo_api.models.user import PaymentPrivacy, User
 
 
 class PaymentApi:
+    """
+    API for querying and making/requesting payments.
+
+    Args:
+        profile (User): User object for the current user, fetched at login.
+        api_client (ApiClient): Logged in client instance to use for requests.
+        balance (float | None, optional): User initial Venmo balance, if desired. Defaults
+            to None.
+    """
+
     def __init__(
         self, profile: User, api_client: ApiClient, balance: float | None = None
     ):
-        """
-        Args:
-            profile (User): User object for the current user, fetched at login.
-            api_client (ApiClient): client to use for requests.
-            balance (float | None, optional): User initial Venmo balance, if desired. Defaults
-                to None.
-        """
         super().__init__()
         self._profile = profile
         self._balance = balance
@@ -43,6 +46,7 @@ class PaymentApi:
             "no_pending_payment_error": 2901,
             "no_pending_payment_error2": 2905,
             "not_enough_balance_error": 13006,
+            "otp_step_up_required_error": 1396,
         }
 
     def get_charge_payments(self, limit=100000) -> Page[Payment]:
@@ -359,12 +363,26 @@ class PaymentApi:
             body.update({"funding_source_id": funding_source_id})
 
         response = self._api_client.call_api(
-            resource_path="/payments", method="POST", body=body
+            resource_path="/payments",
+            method="POST",
+            body=body,
+            ok_error_codes=[
+                self._payment_error_codes["otp_step_up_required_error"],
+                self._payment_error_codes["not_enough_balance_error"],
+            ],
         )
+
         # handle 200 status code errors
-        error_code = response.body["data"].get("error_code")
+        error_code = response.body.get("error").get("code")
+
         if error_code:
-            if error_code == self._payment_error_codes["not_enough_balance_error"]:
+            if error_code == self._payment_error_codes["otp_step_up_required_error"]:
+                raise RuntimeError(
+                    "OTP step-up required for payment to go through, log out and try "
+                    "again on an actual device."
+                )
+
+            elif error_code == self._payment_error_codes["not_enough_balance_error"]:
                 raise NotEnoughBalanceError(amount, target_user_id)
 
             error = response.body["data"]

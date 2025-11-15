@@ -51,10 +51,10 @@ class Client:
             Self: Logged in Client instance.
         """
         api_client = ApiClient(device_id=device_id)
-        access_token = AuthenticationApi(
-            api_client, device_id
-        ).login_with_credentials_cli(username=username, password=password)
-        api_client.update_access_token(access_token)
+        # api_client is updated with access_token internally
+        access_token = AuthenticationApi(api_client).login_with_credentials_cli(
+            username=username, password=password
+        )
         return Client(api_client=api_client)
 
     @staticmethod
