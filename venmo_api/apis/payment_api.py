@@ -373,7 +373,11 @@ class PaymentApi:
         )
 
         # handle 200 status code errors
-        error_code = response.body.get("error").get("code")
+        error_code = None
+        try:
+            error_code = response.body.get("error").get("code")
+        except:
+            pass
 
         if error_code:
             if error_code == self._payment_error_codes["otp_step_up_required_error"]:
