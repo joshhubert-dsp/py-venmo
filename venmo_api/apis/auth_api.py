@@ -135,7 +135,7 @@ class AuthenticationApi:
         """
         response = self._api_client.call_api(
             resource_path="/account/two-factor/token",
-            header_params={"venmo-otp-secret": otp_secret},
+            headers={"venmo-otp-secret": otp_secret},
             body={"via": "sms"},
             method="POST",
         )
@@ -162,10 +162,10 @@ class AuthenticationApi:
         Returns:
             str: _description_
         """
-        header_params = {"venmo-otp": user_otp, "venmo-otp-secret": otp_secret}
+        headers = {"venmo-otp": user_otp, "venmo-otp-secret": otp_secret}
         response = self._api_client.call_api(
             resource_path="/oauth/access_token",
-            header_params=header_params,
+            headers=headers,
             params={"client_id": 1},
             method="POST",
         )
